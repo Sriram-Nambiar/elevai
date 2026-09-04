@@ -1,0 +1,377 @@
+{
+  "version": "1.0.0",
+  "catalog_items": [
+    {
+      "sku_id": "COP-COL-TFT",
+      "category": "car_operating_panel",
+      "name": "Full-Height Column COP with 7-Inch TFT & Micro-Motion Braille",
+      "dimensions_mm": {
+        "height": 1950,
+        "width": 260,
+        "depth": 35
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 150,
+        "max_cutout_width_mm": 280,
+        "interactive_reach_max_mm": 1200
+      },
+      "visual_attributes": {
+        "material": "stainless_steel_304",
+        "finish": "hairline_satin",
+        "prompt_keywords": [
+          "full height brushed stainless steel elevator operating panel",
+          "flush round micro-motion buttons with blue LED halo",
+          "integrated 7-inch color TFT floor indicator",
+          "clean architectural seams"
+        ]
+      },
+      "unit_cost_inr": 54000
+    },
+    {
+      "sku_id": "COP-MOD-SLM",
+      "category": "car_operating_panel",
+      "name": "Surface-Mount Slim Retrofit COP (Cutout-Free)",
+      "dimensions_mm": {
+        "height": 1100,
+        "width": 220,
+        "depth": 22
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 900,
+        "max_cutout_width_mm": 0,
+        "interactive_reach_max_mm": 1200
+      },
+      "visual_attributes": {
+        "material": "anodized_aluminum",
+        "finish": "matte_silver",
+        "prompt_keywords": [
+          "slim surface-mounted elevator push-button panel",
+          "flush mechanical braille buttons",
+          "amber segment floor display",
+          "beveled aluminum bezel"
+        ]
+      },
+      "unit_cost_inr": 36000
+    },
+    {
+      "sku_id": "COP-ACC-HOR",
+      "category": "car_operating_panel",
+      "name": "Horizontal Barrier-Free Disability Auxiliary COP (EN 81-70)",
+      "dimensions_mm": {
+        "height": 280,
+        "width": 850,
+        "depth": 25
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 900,
+        "max_cutout_width_mm": 150,
+        "interactive_reach_max_mm": 1100
+      },
+      "visual_attributes": {
+        "material": "stainless_steel_316",
+        "finish": "bead_blasted",
+        "prompt_keywords": [
+          "horizontal accessibility elevator button strip",
+          "oversized embossed braille push buttons",
+          "satin stainless steel low reach control bar"
+        ]
+      },
+      "unit_cost_inr": 28000
+    },
+    {
+      "sku_id": "WALL-SS-HAIRLINE",
+      "category": "wall_panel",
+      "name": "304 Hairline Brushed Stainless Steel Architectural Panel",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 600,
+        "depth": 15
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "stainless_steel_304",
+        "finish": "hairline_brushed",
+        "prompt_keywords": [
+          "precision hairline brushed stainless steel elevator wall panels",
+          "vertical directional metal grain",
+          "subtle architectural reflections",
+          "hairline shadow gap joins"
+        ]
+      },
+      "unit_cost_inr": 16500
+    },
+    {
+      "sku_id": "WALL-SS-BLACKPVD",
+      "category": "wall_panel",
+      "name": "Black Titanium PVD Mirror-Accent Stainless Steel Panel",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 600,
+        "depth": 15
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "pvd_coated_steel",
+        "finish": "black_mirror_satin",
+        "prompt_keywords": [
+          "luxurious black titanium stainless steel elevator cladding",
+          "dark reflective obsidian metal surface",
+          "high-end commercial elevator interior",
+          "recessed dark reveal reveals"
+        ]
+      },
+      "unit_cost_inr": 24000
+    },
+    {
+      "sku_id": "WALL-LAM-OAK",
+      "category": "wall_panel",
+      "name": "Class-A Fire-Rated Architectural Natural Oak Veneer",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 500,
+        "depth": 18
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "fire_rated_laminate",
+        "finish": "natural_matte_timber",
+        "prompt_keywords": [
+          "natural rift oak timber wall cladding",
+          "warm vertical wood grain elevator panels",
+          "matte non-reflective architectural acoustic laminate",
+          "scandinavian minimalist interior"
+        ]
+      },
+      "unit_cost_inr": 13500
+    },
+    {
+      "sku_id": "WALL-LAM-WALNUT",
+      "category": "wall_panel",
+      "name": "Fluted Dark American Walnut Architectural Panel",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 500,
+        "depth": 20
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "engineered_timber",
+        "finish": "satin_polyurethane",
+        "prompt_keywords": [
+          "dark american walnut ribbed elevator wall panels",
+          "vertical fluted wood texture with elegant depth",
+          "luxury hospitality lift cabin design",
+          "warm ambient wood tones"
+        ]
+      },
+      "unit_cost_inr": 19000
+    },
+    {
+      "sku_id": "WALL-GLS-WHITE",
+      "category": "wall_panel",
+      "name": "Toughened Back-Painted Pure White Safety Glass Panel",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 450,
+        "depth": 12
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "tempered_glass",
+        "finish": "gloss_lacquered",
+        "prompt_keywords": [
+          "high-gloss back-painted white glass elevator panels",
+          "crisp clean reflective glass cladding",
+          "minimalist modern clinical elevator interior",
+          "polished vertical beveled joins"
+        ]
+      },
+      "unit_cost_inr": 17500
+    },
+    {
+      "sku_id": "CEIL-LED-PERIM",
+      "category": "ceiling_lighting",
+      "name": "Perimeter Indirect LED Cove Suspended Canopy",
+      "dimensions_mm": {
+        "height": 75,
+        "width": 1350,
+        "depth": 1550
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 2100,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "stainless_steel_and_acrylic",
+        "finish": "hairline_with_4000k_cove",
+        "prompt_keywords": [
+          "recessed perimeter floating false ceiling",
+          "warm 4000K neutral white indirect LED trough lighting",
+          "hairline stainless steel central drop ceiling panel",
+          "glare-free soft architectural illumination"
+        ]
+      },
+      "unit_cost_inr": 27000
+    },
+    {
+      "sku_id": "CEIL-GRD-ACRYLIC",
+      "category": "ceiling_lighting",
+      "name": "Full-Luminous Monolithic Acrylic Diffuser Ceiling",
+      "dimensions_mm": {
+        "height": 50,
+        "width": 1350,
+        "depth": 1550
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 2150,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "optical_acrylic",
+        "finish": "milky_diffused_5000k",
+        "prompt_keywords": [
+          "seamless glowing frosted acrylic skylight ceiling",
+          "uniform shadowless diffused bright cool white lighting",
+          "clean thin aluminum border grid"
+        ]
+      },
+      "unit_cost_inr": 23000
+    },
+    {
+      "sku_id": "CEIL-SPT-CANOPY",
+      "category": "ceiling_lighting",
+      "name": "Four-Spot Downlight Canopy with Brushed Titanium Border",
+      "dimensions_mm": {
+        "height": 60,
+        "width": 1350,
+        "depth": 1550
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 2150,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "brushed_titanium_aluminum",
+        "finish": "satin_black",
+        "prompt_keywords": [
+          "four flush-mounted round architectural LED spot downlights",
+          "subtle pool of downward light",
+          "brushed dark graphite metallic suspended ceiling plate"
+        ]
+      },
+      "unit_cost_inr": 21500
+    },
+    {
+      "sku_id": "FLR-RUB-COIN",
+      "category": "flooring",
+      "name": "Commercial Heavy-Duty Coin-Pattern Non-Slip Rubber Flooring",
+      "dimensions_mm": {
+        "height": 4,
+        "width": 1400,
+        "depth": 1600
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "synthetic_elastomer_rubber",
+        "finish": "matte_raised_stud",
+        "prompt_keywords": [
+          "durable charcoal black coin-stud rubber elevator floor",
+          "matte slip-resistant heavy duty industrial floor texture",
+          "seamless perimeter edge threshold"
+        ]
+      },
+      "unit_cost_inr": 11000
+    },
+    {
+      "sku_id": "FLR-STN-GRANITE",
+      "category": "flooring",
+      "name": "Honed Absolute Black Engineered Granite Thin-Slab",
+      "dimensions_mm": {
+        "height": 10,
+        "width": 1400,
+        "depth": 1600
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "engineered_granite",
+        "finish": "honed_anti_slip",
+        "prompt_keywords": [
+          "seamless honed matte black granite floor slab",
+          "understated luxury stone flooring",
+          "low-reflectivity natural mineral texture",
+          "flush brass transition strip at threshold"
+        ]
+      },
+      "unit_cost_inr": 26000
+    },
+    {
+      "sku_id": "DOR-SKN-SS304",
+      "category": "doors",
+      "name": "Flush Architectural Hairline Door Cladding Skins (Set of 2)",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 450,
+        "depth": 2
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 10,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "stainless_steel_304",
+        "finish": "hairline_grain",
+        "prompt_keywords": [
+          "pristine hairline stainless steel central opening elevator doors",
+          "clean straight center seam closure",
+          "crisp vertical directional brushed metal texture"
+        ]
+      },
+      "unit_cost_inr": 22000
+    },
+    {
+      "sku_id": "DOR-SKN-LINEN",
+      "category": "doors",
+      "name": "Scratch-Resistant Linen-Textured Rigidized Metal Door Skins",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 450,
+        "depth": 2
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 10,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "textured_rigidized_steel",
+        "finish": "micro_linen_embossed",
+        "prompt_keywords": [
+          "fine linen-pattern textured stainless steel lift doors",
+          "anti-scratch commercial grade embossed metal panels",
+          "architectural matte sheen"
+        ]
+      },
+      "unit_cost_inr": 26500
+    }
+  ]
+}

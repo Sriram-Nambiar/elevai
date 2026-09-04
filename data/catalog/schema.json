@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LiftModernizationCatalog",
+  "type": "object",
+  "required": ["version", "catalog_items"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "catalog_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "sku_id",
+          "category",
+          "name",
+          "dimensions_mm",
+          "mounting_constraints",
+          "visual_attributes",
+          "unit_cost_inr"
+        ],
+        "properties": {
+          "sku_id": {
+            "type": "string",
+            "pattern": "^[A-Z]{3,4}-[A-Z0-9]+-[A-Z0-9]+$"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "wall_panel",
+              "car_operating_panel",
+              "ceiling_lighting",
+              "flooring",
+              "doors"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "dimensions_mm": {
+            "type": "object",
+            "required": ["height", "width", "depth"],
+            "properties": {
+              "height": { "type": "number", "exclusiveMinimum": 0 },
+              "width": { "type": "number", "exclusiveMinimum": 0 },
+              "depth": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          },
+          "mounting_constraints": {
+            "type": "object",
+            "properties": {
+              "min_floor_clearance_mm": { "type": "number", "minimum": 0 },
+              "max_cutout_width_mm": { "type": "number", "minimum": 0 },
+              "interactive_reach_max_mm": { "type": "number", "minimum": 0 }
+            }
+          },
+          "visual_attributes": {
+            "type": "object",
+            "required": ["material", "finish", "prompt_keywords"],
+            "properties": {
+              "material": { "type": "string" },
+              "finish": { "type": "string" },
+              "prompt_keywords": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            }
+          },
+          "unit_cost_inr": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    }
+  }
+}
