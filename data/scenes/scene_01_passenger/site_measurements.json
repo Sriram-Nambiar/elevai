@@ -1,0 +1,17 @@
+{
+  "scene_id": "scene_01_passenger",
+  "lift_type": "passenger",
+  "building_type": "boutique_commercial",
+  "cabin_dimensions_mm": {
+    "width": 1200,
+    "depth": 1400,
+    "height": 2350
+  },
+  "existing_cop": {
+    "mounting_height_from_floor_mm": 1000,
+    "panel_width_mm": 180,
+    "panel_height_mm": 800
+  },
+  "door_opening_width_mm": 800,
+  "max_allowable_flooring_thickness_mm": 12
+}
