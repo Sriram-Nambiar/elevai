@@ -1,0 +1,13 @@
+torch
+torchvision
+torchaudio
+transformers
+accelerate
+opencv-python
+pillow
+numpy
+pydantic
+supervision
+fastapi
+uvicorn
+python-multipart
