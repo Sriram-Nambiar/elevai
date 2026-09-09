@@ -1,0 +1,248 @@
+{
+  "scene_id": "scene_01_passenger",
+  "camera_calibration": {
+    "reference_depth": 0.251,
+    "base_mm_per_pixel": 21.7593
+  },
+  "calibrated_components": [
+    {
+      "component_id": "wall_panel_0",
+      "category": "wall_panel",
+      "confidence": 0.368,
+      "median_depth": 0.31,
+      "dimensions_px": {
+        "height": 108,
+        "width": 14
+      },
+      "estimated_dimensions_mm": {
+        "height": 2867.7,
+        "width": 371.7
+      }
+    },
+    {
+      "component_id": "ceiling_1",
+      "category": "ceiling",
+      "confidence": 0.338,
+      "median_depth": 0.239,
+      "dimensions_px": {
+        "height": 43,
+        "width": 178
+      },
+      "estimated_dimensions_mm": {
+        "height": 1062.8,
+        "width": 4399.7
+      }
+    },
+    {
+      "component_id": "floor_2",
+      "category": "floor",
+      "confidence": 0.298,
+      "median_depth": 0.141,
+      "dimensions_px": {
+        "height": 477,
+        "width": 266
+      },
+      "estimated_dimensions_mm": {
+        "height": 10573.8,
+        "width": 5896.5
+      }
+    },
+    {
+      "component_id": "wall_panel_3",
+      "category": "wall_panel",
+      "confidence": 0.281,
+      "median_depth": 0.294,
+      "dimensions_px": {
+        "height": 421,
+        "width": 39
+      },
+      "estimated_dimensions_mm": {
+        "height": 11007.1,
+        "width": 1019.7
+      }
+    },
+    {
+      "component_id": "cop_4",
+      "category": "cop",
+      "confidence": 0.255,
+      "median_depth": 0.961,
+      "dimensions_px": {
+        "height": 65,
+        "width": 23
+      },
+      "estimated_dimensions_mm": {
+        "height": 2826.5,
+        "width": 1000.1
+      }
+    },
+    {
+      "component_id": "floor_5",
+      "category": "floor",
+      "confidence": 0.254,
+      "median_depth": 0.318,
+      "dimensions_px": {
+        "height": 89,
+        "width": 233
+      },
+      "estimated_dimensions_mm": {
+        "height": 2381.4,
+        "width": 6234.4
+      }
+    },
+    {
+      "component_id": "wall_panel_6",
+      "category": "wall_panel",
+      "confidence": 0.25,
+      "median_depth": 0.286,
+      "dimensions_px": {
+        "height": 423,
+        "width": 39
+      },
+      "estimated_dimensions_mm": {
+        "height": 10973.1,
+        "width": 1011.7
+      }
+    },
+    {
+      "component_id": "wall_panel_7",
+      "category": "wall_panel",
+      "confidence": 0.241,
+      "median_depth": 0.141,
+      "dimensions_px": {
+        "height": 477,
+        "width": 266
+      },
+      "estimated_dimensions_mm": {
+        "height": 10573.8,
+        "width": 5896.5
+      }
+    },
+    {
+      "component_id": "wall_panel_8",
+      "category": "wall_panel",
+      "confidence": 0.218,
+      "median_depth": 0.275,
+      "dimensions_px": {
+        "height": 269,
+        "width": 35
+      },
+      "estimated_dimensions_mm": {
+        "height": 6895.8,
+        "width": 897.2
+      }
+    },
+    {
+      "component_id": "wall_panel_9",
+      "category": "wall_panel",
+      "confidence": 0.2,
+      "median_depth": 0.012,
+      "dimensions_px": {
+        "height": 301,
+        "width": 164
+      },
+      "estimated_dimensions_mm": {
+        "height": 5659.2,
+        "width": 3083.4
+      }
+    },
+    {
+      "component_id": "wall_panel_10",
+      "category": "wall_panel",
+      "confidence": 0.2,
+      "median_depth": 0.016,
+      "dimensions_px": {
+        "height": 190,
+        "width": 153
+      },
+      "estimated_dimensions_mm": {
+        "height": 3591.6,
+        "width": 2892.2
+      }
+    },
+    {
+      "component_id": "cop_11",
+      "category": "cop",
+      "confidence": 0.182,
+      "median_depth": 0.31,
+      "dimensions_px": {
+        "height": 108,
+        "width": 14
+      },
+      "estimated_dimensions_mm": {
+        "height": 2867.7,
+        "width": 371.7
+      }
+    },
+    {
+      "component_id": "wall_panel_12",
+      "category": "wall_panel",
+      "confidence": 0.175,
+      "median_depth": 0.961,
+      "dimensions_px": {
+        "height": 65,
+        "width": 23
+      },
+      "estimated_dimensions_mm": {
+        "height": 2826.5,
+        "width": 1000.1
+      }
+    },
+    {
+      "component_id": "wall_panel_13",
+      "category": "wall_panel",
+      "confidence": 0.172,
+      "median_depth": 0.275,
+      "dimensions_px": {
+        "height": 263,
+        "width": 33
+      },
+      "estimated_dimensions_mm": {
+        "height": 6742.0,
+        "width": 846.0
+      }
+    },
+    {
+      "component_id": "cop_14",
+      "category": "cop",
+      "confidence": 0.137,
+      "median_depth": 0.965,
+      "dimensions_px": {
+        "height": 34,
+        "width": 12
+      },
+      "estimated_dimensions_mm": {
+        "height": 1481.9,
+        "width": 523.0
+      }
+    },
+    {
+      "component_id": "wall_panel_15",
+      "category": "wall_panel",
+      "confidence": 0.124,
+      "median_depth": 0.004,
+      "dimensions_px": {
+        "height": 82,
+        "width": 151
+      },
+      "estimated_dimensions_mm": {
+        "height": 1525.0,
+        "width": 2808.2
+      }
+    },
+    {
+      "component_id": "wall_panel_16",
+      "category": "wall_panel",
+      "confidence": 0.121,
+      "median_depth": 0.384,
+      "dimensions_px": {
+        "height": 493,
+        "width": 366
+      },
+      "estimated_dimensions_mm": {
+        "height": 14046.1,
+        "width": 10427.7
+      }
+    }
+  ],
+  "fit_error_analysis": {}
+}
