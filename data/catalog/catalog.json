@@ -104,6 +104,31 @@
       "unit_cost_inr": 16500
     },
     {
+      "sku_id": "WALL-BRZ-BRUSHED",
+      "category": "wall_panel",
+      "name": "Architectural Brushed Bronze Satin Stainless Cladding",
+      "dimensions_mm": {
+        "height": 2100,
+        "width": 600,
+        "depth": 15
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "bronze_coated_steel",
+        "finish": "brushed_bronze_satin",
+        "prompt_keywords": [
+          "warm brushed bronze stainless steel elevator panels",
+          "vertical directional bronze metallic sheen",
+          "subtle warm golden architectural highlights",
+          "minimal hairline joins"
+        ]
+      },
+      "unit_cost_inr": 21500
+    },
+    {
       "sku_id": "WALL-SS-BLACKPVD",
       "category": "wall_panel",
       "name": "Black Titanium PVD Mirror-Accent Stainless Steel Panel",
@@ -283,7 +308,8 @@
       "dimensions_mm": {
         "height": 4,
         "width": 1400,
-        "depth": 1600
+        "depth": 1600,
+        "thickness_mm": 4
       },
       "mounting_constraints": {
         "min_floor_clearance_mm": 0,
@@ -301,13 +327,40 @@
       "unit_cost_inr": 11000
     },
     {
+      "sku_id": "FLR-GRAN-NERO",
+      "category": "flooring",
+      "name": "Nero Marquina Engineered Granite Precision Floor Tile",
+      "dimensions_mm": {
+        "height": 10,
+        "width": 1400,
+        "depth": 1600,
+        "thickness_mm": 10
+      },
+      "mounting_constraints": {
+        "min_floor_clearance_mm": 0,
+        "max_cutout_width_mm": 0
+      },
+      "visual_attributes": {
+        "material": "engineered_granite",
+        "finish": "honed_anti_slip",
+        "prompt_keywords": [
+          "deep nero marquina black granite elevator floor",
+          "subtle fine crystalline veining and polished stone joints",
+          "luxury architectural stone flooring",
+          "flush brass transition strip at threshold"
+        ]
+      },
+      "unit_cost_inr": 28500
+    },
+    {
       "sku_id": "FLR-STN-GRANITE",
       "category": "flooring",
       "name": "Honed Absolute Black Engineered Granite Thin-Slab",
       "dimensions_mm": {
         "height": 10,
         "width": 1400,
-        "depth": 1600
+        "depth": 1600,
+        "thickness_mm": 10
       },
       "mounting_constraints": {
         "min_floor_clearance_mm": 0,
