@@ -224,7 +224,7 @@ export default function ElevaiDashboard() {
   };
 
   // Export PDF Quotation & Engineering Spec Sheet
-  async function handleExportPdf() {
+  async function handleDownloadQuote() {
     const activeList = Object.values(selectedSkus).filter(Boolean);
     if (activeList.length === 0) return;
 
@@ -232,7 +232,7 @@ export default function ElevaiDashboard() {
       setExportingPdf(true);
       setError(null);
 
-      const res = await fetch(`${API_BASE}/api/v1/quote/export`, {
+      const res = await fetch("http://127.0.0.1:8000/api/v1/quote/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -250,7 +250,7 @@ export default function ElevaiDashboard() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `elevai_modernization_quote_${activeScene}.pdf`;
+      a.download = "elevai_modernization_quote.pdf";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -261,6 +261,8 @@ export default function ElevaiDashboard() {
       setExportingPdf(false);
     }
   }
+
+  const handleExportPdf = handleDownloadQuote;
 
   // Upload handler for cabin photo dropzone
   async function handleFileUpload(file: File) {
@@ -741,6 +743,26 @@ export default function ElevaiDashboard() {
                     {evaluation.bill_of_materials.length} Items Total
                   </div>
                 </div>
+
+                {/* Styled CTA button right below the total project estimate */}
+                <button
+                  onClick={handleDownloadQuote}
+                  disabled={exportingPdf}
+                  className="w-full mt-3 flex items-center justify-center space-x-2 rounded-lg border border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 px-3.5 py-2.5 text-xs font-semibold text-amber-200 transition shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+                >
+                  {exportingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                      <span>Compiling Engineering Spec Sheet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 text-amber-400 group-hover:scale-105 transition-transform" />
+                      <span>Download Engineering Spec Sheet (PDF)</span>
+                      <Download className="h-3.5 w-3.5 ml-1 text-amber-400/80" />
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Explanatory Fatal Violations List */}
@@ -826,19 +848,19 @@ export default function ElevaiDashboard() {
 
               {/* Direct PDF Quotation & Engineering Spec Sheet Download Trigger */}
               <button
-                onClick={handleExportPdf}
+                onClick={handleDownloadQuote}
                 disabled={exportingPdf}
                 className="w-full flex items-center justify-center space-x-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 px-4 py-3 text-xs font-semibold text-amber-300 transition shadow-lg shadow-amber-500/5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {exportingPdf ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
-                    <span>Generating Spec Sheet PDF...</span>
+                    <span>Compiling Engineering Spec Sheet...</span>
                   </>
                 ) : (
                   <>
                     <FileText className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                    <span>Export PDF Quotation & Spec Sheet</span>
+                    <span>Download Engineering Spec Sheet (PDF)</span>
                     <Download className="h-3.5 w-3.5 ml-1 text-amber-400/80" />
                   </>
                 )}

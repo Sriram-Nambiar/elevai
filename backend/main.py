@@ -241,7 +241,7 @@ def export_quotation_pdf(payload: ExportQuoteRequest):
 
     pdf_gen = get_pdf_generator()
     try:
-        pdf_bytes = pdf_gen.generate_quote_pdf(
+        pdf_bytes = pdf_gen.generate_pdf(
             evaluation=evaluation,
             cabin_dimensions_mm=dims,
             max_allowable_flooring_thickness_mm=max_floor_thk
@@ -249,10 +249,7 @@ def export_quotation_pdf(payload: ExportQuoteRequest):
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": 'attachment; filename="elevai_modernization_quote.pdf"',
-                "Content-Type": "application/pdf"
-            }
+            headers={"Content-Disposition": "attachment; filename=elevai_modernization_quote.pdf"}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF generation failure: {str(e)}")

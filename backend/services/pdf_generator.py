@@ -131,7 +131,7 @@ class QuotePDFGenerator:
             alignment=2
         )
 
-    def generate_quote_pdf(
+    def generate_pdf(
         self,
         evaluation: Dict[str, Any],
         cabin_dimensions_mm: Optional[Dict[str, int]] = None,
@@ -401,3 +401,6 @@ class QuotePDFGenerator:
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
+
+    # Backward compatibility alias
+    generate_quote_pdf = generate_pdf
