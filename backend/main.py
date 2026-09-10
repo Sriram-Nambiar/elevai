@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -19,6 +19,7 @@ from services.rules_engine import RulesEngine
 from services.calibrator import CabinCalibrator
 from services.segmenter import CabinSegmenter
 from services.inpainter import CabinInpainter
+from services.pdf_generator import QuotePDFGenerator
 
 app = FastAPI(
     title="Elevai API",
@@ -50,6 +51,7 @@ rules_engine = RulesEngine()
 _calibrator: Optional[CabinCalibrator] = None
 _segmenter: Optional[CabinSegmenter] = None
 _inpainter: Optional[CabinInpainter] = None
+_pdf_generator: Optional[QuotePDFGenerator] = None
 
 def get_calibrator() -> CabinCalibrator:
     global _calibrator
@@ -69,6 +71,12 @@ def get_inpainter() -> CabinInpainter:
         _inpainter = CabinInpainter()
     return _inpainter
 
+def get_pdf_generator() -> QuotePDFGenerator:
+    global _pdf_generator
+    if _pdf_generator is None:
+        _pdf_generator = QuotePDFGenerator()
+    return _pdf_generator
+
 
 # -----------------------------------------------------------------------------
 # Request & Response Schemas
@@ -86,6 +94,17 @@ class SceneActionRequest(BaseModel):
 class PreviewRenderRequest(BaseModel):
     scene_id: str = Field(default="scene_01_passenger", description="Target scene folder name inside data/scenes/")
     selected_skus: List[str] = Field(..., description="List of hardware SKU IDs to composite")
+
+class ExportQuoteRequest(BaseModel):
+    selected_skus: List[str] = Field(..., example=["WALL-SS-HAIRLINE", "FLR-RUB-COIN", "COP-COL-TFT", "CEIL-LED-PERIM"])
+    cabin_dimensions_mm: Optional[Dict[str, int]] = Field(
+        default=None,
+        description="Clear cabin dimensions width, depth, height in mm"
+    )
+    max_allowable_flooring_thickness_mm: Optional[int] = Field(
+        default=12,
+        description="Maximum floor sill threshold clearance in mm"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -200,6 +219,43 @@ def render_preview(payload: PreviewRenderRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preview rendering failure: {str(e)}")
+
+@app.post("/api/v1/quote/export")
+def export_quotation_pdf(payload: ExportQuoteRequest):
+    dims = payload.cabin_dimensions_mm or {"width": 1200, "depth": 1400, "height": 2350}
+    max_floor_thk = payload.max_allowable_flooring_thickness_mm or 12
+
+    site_measurements = {
+        "cabin_dimensions_mm": dims,
+        "max_allowable_flooring_thickness_mm": max_floor_thk,
+        "existing_cop": {
+            "mounting_height_from_floor_mm": 1000
+        }
+    }
+
+    # Evaluate configuration using deterministic rules engine
+    evaluation = rules_engine.evaluate_configuration(
+        site_measurements=site_measurements,
+        selected_skus=payload.selected_skus
+    )
+
+    pdf_gen = get_pdf_generator()
+    try:
+        pdf_bytes = pdf_gen.generate_quote_pdf(
+            evaluation=evaluation,
+            cabin_dimensions_mm=dims,
+            max_allowable_flooring_thickness_mm=max_floor_thk
+        )
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="elevai_modernization_quote.pdf"',
+                "Content-Type": "application/pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF generation failure: {str(e)}")
 
 @app.post("/api/v1/calibrate")
 def run_calibration(payload: SceneActionRequest):

@@ -53,7 +53,19 @@ def run_tests():
     assert r.status_code == 200, f"cabin_view.jpg fetch failed: {r.status_code}"
     print(f"[+] Static file cabin_view.jpg verified: {len(r.content)} bytes")
 
-    print("\n[SUCCESS] All API, Rules Engine, and Inpainting tests PASSED!")
+    # 7. PDF Quotation export check
+    export_payload = {
+        "selected_skus": ["WALL-BRZ-BRUSHED", "FLR-GRAN-NERO", "COP-COL-TFT", "CEIL-LED-PERIM"],
+        "cabin_dimensions_mm": {"width": 1200, "depth": 1400, "height": 2350},
+        "max_allowable_flooring_thickness_mm": 12
+    }
+    r = client.post("/api/v1/quote/export", json=export_payload)
+    assert r.status_code == 200, f"PDF export failed: {r.status_code}, {r.text}"
+    assert r.headers["content-type"] == "application/pdf", f"Invalid content-type: {r.headers.get('content-type')}"
+    assert r.content.startswith(b"%PDF-"), "Invalid PDF binary stream"
+    print(f"[+] PDF Quotation export verified: {len(r.content)} bytes")
+
+    print("\n[SUCCESS] All API, Rules Engine, Inpainting, and PDF Export tests PASSED!")
 
 if __name__ == "__main__":
     run_tests()

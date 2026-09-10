@@ -19,7 +19,9 @@ import {
   Check,
   Wrench,
   IndianRupee,
-  Cpu
+  Cpu,
+  FileText,
+  Download
 } from "lucide-react";
 
 interface CatalogItem {
@@ -87,6 +89,7 @@ export default function ElevaiDashboard() {
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [rendering, setRendering] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [exportingPdf, setExportingPdf] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Viewport & Scene state
@@ -219,6 +222,45 @@ export default function ElevaiDashboard() {
     runEvaluation(updated);
     triggerRender(activeScene, updated);
   };
+
+  // Export PDF Quotation & Engineering Spec Sheet
+  async function handleExportPdf() {
+    const activeList = Object.values(selectedSkus).filter(Boolean);
+    if (activeList.length === 0) return;
+
+    try {
+      setExportingPdf(true);
+      setError(null);
+
+      const res = await fetch(`${API_BASE}/api/v1/quote/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selected_skus: activeList,
+          cabin_dimensions_mm: cabinDims,
+          max_allowable_flooring_thickness_mm: maxFlooringThickness,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to generate PDF quotation: ${res.statusText}`);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `elevai_modernization_quote_${activeScene}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message || "PDF quote export failed");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
 
   // Upload handler for cabin photo dropzone
   async function handleFileUpload(file: File) {
@@ -639,11 +681,21 @@ export default function ElevaiDashboard() {
         {/* RIGHT COLUMN: Compliance Audit Badge, Violations & Itemized BOM    */}
         {/* =================================================================== */}
         <section className="space-y-4 xl:col-span-3">
-          <div className="flex items-center space-x-2">
-            <Boxes className="h-4 w-4 text-zinc-400" />
-            <h2 className="text-xs font-semibold tracking-wider uppercase text-zinc-300">
-              Compliance & BOM
-            </h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Boxes className="h-4 w-4 text-zinc-400" />
+              <h2 className="text-xs font-semibold tracking-wider uppercase text-zinc-300">
+                Compliance & BOM
+              </h2>
+            </div>
+            <button
+              onClick={handleExportPdf}
+              disabled={exportingPdf}
+              className="inline-flex items-center space-x-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 transition cursor-pointer disabled:opacity-50"
+            >
+              <Download className="h-3 w-3" />
+              <span>PDF Export</span>
+            </button>
           </div>
 
           {evaluation && (
@@ -771,6 +823,26 @@ export default function ElevaiDashboard() {
                   </span>
                 </div>
               </div>
+
+              {/* Direct PDF Quotation & Engineering Spec Sheet Download Trigger */}
+              <button
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                className="w-full flex items-center justify-center space-x-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 px-4 py-3 text-xs font-semibold text-amber-300 transition shadow-lg shadow-amber-500/5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+              >
+                {exportingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                    <span>Generating Spec Sheet PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span>Export PDF Quotation & Spec Sheet</span>
+                    <Download className="h-3.5 w-3.5 ml-1 text-amber-400/80" />
+                  </>
+                )}
+              </button>
             </div>
           )}
         </section>
