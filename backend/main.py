@@ -1,10 +1,13 @@
 import os
+import shutil
+import json
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 # Ensure backend directory is in sys.path for internal service imports
@@ -15,10 +18,11 @@ if str(backend_dir) not in sys.path:
 from services.rules_engine import RulesEngine
 from services.calibrator import CabinCalibrator
 from services.segmenter import CabinSegmenter
+from services.inpainter import CabinInpainter
 
 app = FastAPI(
     title="Elevai API",
-    description="AI-driven elevator modernization, segmentation, calibration, and fit validation platform.",
+    description="AI-driven elevator modernization, spatial compliance auditing (EN 81-70), and procedural inpainting previews.",
     version="1.0.0"
 )
 
@@ -31,14 +35,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BASE_DIR = backend_dir.parent
+
+# Mount static scenes directory to serve raw scans and modernized renders
+scenes_static_dir = BASE_DIR / "data" / "scenes"
+scenes_static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static/scenes", StaticFiles(directory=str(scenes_static_dir)), name="static_scenes")
+
 # -----------------------------------------------------------------------------
 # Service Singletons (Lazy initialized or pre-loaded)
 # -----------------------------------------------------------------------------
-BASE_DIR = backend_dir.parent
 rules_engine = RulesEngine()
 
 _calibrator: Optional[CabinCalibrator] = None
 _segmenter: Optional[CabinSegmenter] = None
+_inpainter: Optional[CabinInpainter] = None
 
 def get_calibrator() -> CabinCalibrator:
     global _calibrator
@@ -51,6 +62,12 @@ def get_segmenter() -> CabinSegmenter:
     if _segmenter is None:
         _segmenter = CabinSegmenter()
     return _segmenter
+
+def get_inpainter() -> CabinInpainter:
+    global _inpainter
+    if _inpainter is None:
+        _inpainter = CabinInpainter()
+    return _inpainter
 
 
 # -----------------------------------------------------------------------------
@@ -66,6 +83,10 @@ class EvaluateRequest(BaseModel):
 class SceneActionRequest(BaseModel):
     scene_id: str = Field(default="scene_01_passenger", description="Target scene folder name inside data/scenes/")
 
+class PreviewRenderRequest(BaseModel):
+    scene_id: str = Field(default="scene_01_passenger", description="Target scene folder name inside data/scenes/")
+    selected_skus: List[str] = Field(..., description="List of hardware SKU IDs to composite")
+
 
 # -----------------------------------------------------------------------------
 # API Endpoints
@@ -76,11 +97,11 @@ def health_check():
         "status": "healthy",
         "services": {
             "rules_engine": "online",
+            "inpainter": "ready",
             "calibrator": "ready",
             "segmenter": "ready"
         }
     }
-
 
 @app.get("/api/v1/catalog")
 def get_catalog(category: Optional[str] = Query(None, description="Filter catalog items by category")):
@@ -92,7 +113,6 @@ def get_catalog(category: Optional[str] = Query(None, description="Filter catalo
         "catalog_items": items
     }
 
-
 @app.post("/api/v1/rules/evaluate")
 def evaluate_configuration(payload: EvaluateRequest):
     measurements = payload.site_measurements
@@ -100,7 +120,6 @@ def evaluate_configuration(payload: EvaluateRequest):
         default_measurements_path = BASE_DIR / "data" / "scenes" / "scene_01_passenger" / "site_measurements.json"
         if not default_measurements_path.exists():
             raise HTTPException(status_code=404, detail="Default site measurements file not found.")
-        import json
         with open(default_measurements_path, "r", encoding="utf-8") as f:
             measurements = json.load(f)
 
@@ -110,6 +129,77 @@ def evaluate_configuration(payload: EvaluateRequest):
     )
     return result
 
+@app.post("/api/v1/scene/upload")
+async def upload_cabin_scene(file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file must be an image (JPEG/PNG).")
+
+    upload_scene_dir = BASE_DIR / "data" / "scenes" / "custom_upload"
+    upload_scene_dir.mkdir(parents=True, exist_ok=True)
+
+    image_path = upload_scene_dir / "cabin_view.jpg"
+    with open(image_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Maintain raw.jpg as identical copy for compatibility
+    raw_path = upload_scene_dir / "raw.jpg"
+    shutil.copyfile(image_path, raw_path)
+
+    # Initialize baseline calibration and measurements
+    measurements_file = upload_scene_dir / "site_measurements.json"
+    default_measurements = {
+        "scene_id": "custom_upload",
+        "lift_type": "passenger",
+        "building_type": "commercial",
+        "cabin_dimensions_mm": {
+            "width": 1200,
+            "depth": 1400,
+            "height": 2350
+        },
+        "max_allowable_flooring_thickness_mm": 12,
+        "existing_cop": {
+            "mounting_height_from_floor_mm": 1000,
+            "panel_width_mm": 180,
+            "panel_height_mm": 800
+        },
+        "door_opening_width_mm": 800
+    }
+    with open(measurements_file, "w", encoding="utf-8") as f:
+        json.dump(default_measurements, f, indent=2)
+
+    return {
+        "status": "success",
+        "scene_id": "custom_upload",
+        "image_url": "http://127.0.0.1:8000/static/scenes/custom_upload/cabin_view.jpg",
+        "filename": file.filename,
+        "cabin_dimensions_mm": default_measurements["cabin_dimensions_mm"],
+        "max_allowable_flooring_thickness_mm": default_measurements["max_allowable_flooring_thickness_mm"],
+        "existing_cop": default_measurements["existing_cop"]
+    }
+
+@app.post("/api/v1/preview/render")
+def render_preview(payload: PreviewRenderRequest):
+    scene_dir = BASE_DIR / "data" / "scenes" / payload.scene_id
+    if not scene_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Scene folder '{payload.scene_id}' not found.")
+
+    inpainter = get_inpainter()
+    try:
+        render_result = inpainter.render(
+            scene_dir=str(scene_dir),
+            selected_skus=payload.selected_skus,
+            output_filename="after_preview.jpg"
+        )
+        preview_url = f"http://127.0.0.1:8000/static/scenes/{payload.scene_id}/after_preview.jpg"
+        return {
+            "status": "success",
+            "scene_id": payload.scene_id,
+            "preview_url": preview_url,
+            "rendered_components": render_result.get("rendered_components", []),
+            "selected_skus": payload.selected_skus
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preview rendering failure: {str(e)}")
 
 @app.post("/api/v1/calibrate")
 def run_calibration(payload: SceneActionRequest):
@@ -127,7 +217,6 @@ def run_calibration(payload: SceneActionRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Calibration failure: {str(e)}")
-
 
 @app.post("/api/v1/segment")
 def run_segmentation(payload: SceneActionRequest):
