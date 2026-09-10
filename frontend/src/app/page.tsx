@@ -79,6 +79,13 @@ const CATEGORY_TAGS: Record<string, { label: string; color: string }> = {
   ceiling_lighting: { label: "Illumination", color: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
 };
 
+const LAYER_CHIPS: { key: string; label: string; color: string }[] = [
+  { key: "wall_panel", label: "Walls", color: "#3b82f6" },
+  { key: "flooring", label: "Floor", color: "#f59e0b" },
+  { key: "ceiling_lighting", label: "Ceiling", color: "#a855f7" },
+  { key: "car_operating_panel", label: "COP", color: "#10b981" },
+];
+
 const API_BASE = "http://127.0.0.1:8000";
 
 export default function ElevaiDashboard() {
@@ -116,7 +123,14 @@ export default function ElevaiDashboard() {
     ceiling_lighting: true,
   });
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [segments, setSegments] = useState<Segment[]>([]);
+
+  // Cross-component hover mapping
+  const hoveredSegmentCategory = hoveredSegment
+    ? segments.find((s) => s.id === hoveredSegment)?.category || null
+    : null;
+  const activeHoverCategory = hoveredCategory || hoveredSegmentCategory;
 
   // Fetch normalized segment overlays
   const fetchSegmentation = useCallback(async (sceneId: string = activeScene) => {
@@ -457,38 +471,41 @@ export default function ElevaiDashboard() {
             </div>
           </div>
 
-          {/* Spatial Layer Visibility Toggles */}
+          {/* Layer Control Bar */}
           <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-lg border border-zinc-800/80 bg-zinc-900/50 px-2.5 py-1.5">
             <div className="flex items-center space-x-1.5">
               <Layers className="h-3.5 w-3.5 text-zinc-400" />
               <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                Segmentation:
+                Layer Masks:
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
-              {Object.entries(CATEGORY_LABELS).map(([catKey, label]) => {
-                const isVisible = visibleLayers[catKey] ?? true;
-                const segCount = segments.filter((s) => s.category === catKey).length;
+              {LAYER_CHIPS.map((chip) => {
+                const isVisible = visibleLayers[chip.key] ?? true;
+                const isCategoryActive = activeHoverCategory === chip.key;
                 return (
                   <button
-                    key={catKey}
+                    key={chip.key}
                     type="button"
                     onClick={() =>
-                      setVisibleLayers((prev) => ({ ...prev, [catKey]: !prev[catKey] }))
+                      setVisibleLayers((prev) => ({ ...prev, [chip.key]: !prev[chip.key] }))
                     }
-                    className={`rounded px-2 py-0.5 text-[10px] font-medium border transition cursor-pointer flex items-center space-x-1 ${
+                    onMouseEnter={() => setHoveredCategory(chip.key)}
+                    onMouseLeave={() => setHoveredCategory(null)}
+                    className={`rounded px-2.5 py-0.5 text-[10px] font-medium border transition-all cursor-pointer flex items-center space-x-1.5 ${
                       isVisible
-                        ? "bg-zinc-800 border-zinc-600 text-zinc-200 shadow-xs"
-                        : "bg-zinc-950/60 border-zinc-800/60 text-zinc-500 line-through"
+                        ? isCategoryActive
+                          ? "bg-zinc-700 border-zinc-500 text-zinc-100 ring-1 ring-zinc-400"
+                          : "bg-zinc-800 border-zinc-650 text-zinc-200 shadow-xs hover:bg-zinc-750"
+                        : "bg-zinc-950/60 border-zinc-800/60 text-zinc-500 line-through opacity-70"
                     }`}
-                    title={`Toggle ${label} mask overlay`}
+                    title={`Toggle ${chip.label} mask visibility`}
                   >
-                    <span>{label.split(" ")[0]}</span>
-                    {segCount > 0 && (
-                      <span className="ml-1 rounded bg-zinc-700/60 px-1 text-[9px] font-mono text-zinc-300">
-                        {segCount}
-                      </span>
-                    )}
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: isVisible ? chip.color : "#52525b" }}
+                    />
+                    <span>{chip.label}</span>
                   </button>
                 );
               })}
@@ -539,15 +556,18 @@ export default function ElevaiDashboard() {
                       segments={segments}
                       visibleCategories={visibleLayers}
                       hoveredSegment={hoveredSegment}
+                      hoveredCategory={hoveredCategory}
                       onHoverSegment={setHoveredSegment}
                     />
                   )}
 
                   {/* Hovered segment indicator tooltip */}
-                  {viewMode === "existing" && hoveredSegment && (
+                  {viewMode === "existing" && (hoveredSegment || activeHoverCategory) && (
                     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 pointer-events-none z-20">
                       {(() => {
-                        const activeSeg = segments.find((s) => s.id === hoveredSegment);
+                        const activeSeg = segments.find(
+                          (s) => s.id === hoveredSegment || s.category === activeHoverCategory
+                        );
                         if (!activeSeg) return null;
                         return (
                           <div className="flex items-center space-x-2 rounded-md bg-zinc-950/90 px-3 py-1 text-xs border border-zinc-700 shadow-xl backdrop-blur-md">
@@ -685,11 +705,18 @@ export default function ElevaiDashboard() {
             {CATEGORY_ORDER.map((catKey) => {
               const items = groupedCatalog[catKey] || [];
               const categoryInfo = CATEGORY_TAGS[catKey] || { label: catKey, color: "border-zinc-700 bg-zinc-800 text-zinc-300" };
+              const isCategoryHovered = activeHoverCategory === catKey;
 
               return (
                 <div
                   key={catKey}
-                  className="rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-4 transition"
+                  onMouseEnter={() => setHoveredCategory(catKey)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                  className={`rounded-xl border transition-all duration-200 p-4 ${
+                    isCategoryHovered
+                      ? "border-amber-500/70 bg-zinc-900/80 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40"
+                      : "border-zinc-800/80 bg-zinc-900/40"
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
@@ -715,9 +742,15 @@ export default function ElevaiDashboard() {
                         <button
                           key={item.sku_id}
                           onClick={() => handleSelectSku(catKey, item.sku_id)}
-                          className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition cursor-pointer ${
+                          onMouseEnter={() => setHoveredCategory(catKey)}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all duration-200 cursor-pointer ${
                             isSelected
-                              ? "border-amber-500/80 bg-amber-500/10 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
+                              ? isCategoryHovered
+                                ? "border-amber-400 bg-amber-500/20 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/80 scale-[1.01]"
+                                : "border-amber-500/80 bg-amber-500/10 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
+                              : isCategoryHovered
+                              ? "border-zinc-700 bg-zinc-850/80 ring-1 ring-zinc-600/50"
                               : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900"
                           }`}
                         >
