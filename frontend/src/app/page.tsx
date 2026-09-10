@@ -23,6 +23,7 @@ import {
   FileText,
   Download
 } from "lucide-react";
+import SegmentOverlay, { Segment } from "../components/SegmentOverlay";
 
 interface CatalogItem {
   sku_id: string;
@@ -106,6 +107,32 @@ export default function ElevaiDashboard() {
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Category visibility and segmentation state
+  const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({
+    wall_panel: true,
+    flooring: true,
+    car_operating_panel: true,
+    ceiling_lighting: true,
+  });
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [segments, setSegments] = useState<Segment[]>([]);
+
+  // Fetch normalized segment overlays
+  const fetchSegmentation = useCallback(async (sceneId: string = activeScene) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/segment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scene_id: sceneId }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setSegments(data.segments || []);
+    } catch (err) {
+      console.error("Segmentation error:", err);
+    }
+  }, [activeScene]);
 
   // Trigger procedural inpainting preview
   const triggerRender = useCallback(async (sceneId: string, skus: Record<string, string>) => {
@@ -202,9 +229,10 @@ export default function ElevaiDashboard() {
 
         setSelectedSkus(initialSelections);
 
-        // Run evaluation and initial render in parallel
+        // Run evaluation, initial render, and fetch segmentation in parallel
         await runEvaluation(initialSelections);
         await triggerRender("scene_01_passenger", initialSelections);
+        await fetchSegmentation("scene_01_passenger");
       } catch (err: any) {
         setError(err.message || "Failed to initialize Elevai Studio");
       } finally {
@@ -213,7 +241,7 @@ export default function ElevaiDashboard() {
     }
 
     initDashboard();
-  }, [runEvaluation, triggerRender]);
+  }, [runEvaluation, triggerRender, fetchSegmentation]);
 
   // Handle SKU toggle
   const handleSelectSku = (category: string, skuId: string) => {
@@ -296,9 +324,10 @@ export default function ElevaiDashboard() {
         setMaxFlooringThickness(data.max_allowable_flooring_thickness_mm);
       }
 
-      // Re-evaluate and generate inpainting render for new photo
+      // Re-evaluate, generate inpainting render, and fetch segmentation for new photo
       await runEvaluation(selectedSkus);
       await triggerRender(data.scene_id, selectedSkus);
+      await fetchSegmentation(data.scene_id);
       setViewMode("modernized");
     } catch (err: any) {
       setError(err.message || "Cabin upload failed");
@@ -428,6 +457,44 @@ export default function ElevaiDashboard() {
             </div>
           </div>
 
+          {/* Spatial Layer Visibility Toggles */}
+          <div className="flex flex-wrap items-center justify-between gap-1.5 rounded-lg border border-zinc-800/80 bg-zinc-900/50 px-2.5 py-1.5">
+            <div className="flex items-center space-x-1.5">
+              <Layers className="h-3.5 w-3.5 text-zinc-400" />
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                Segmentation:
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {Object.entries(CATEGORY_LABELS).map(([catKey, label]) => {
+                const isVisible = visibleLayers[catKey] ?? true;
+                const segCount = segments.filter((s) => s.category === catKey).length;
+                return (
+                  <button
+                    key={catKey}
+                    type="button"
+                    onClick={() =>
+                      setVisibleLayers((prev) => ({ ...prev, [catKey]: !prev[catKey] }))
+                    }
+                    className={`rounded px-2 py-0.5 text-[10px] font-medium border transition cursor-pointer flex items-center space-x-1 ${
+                      isVisible
+                        ? "bg-zinc-800 border-zinc-600 text-zinc-200 shadow-xs"
+                        : "bg-zinc-950/60 border-zinc-800/60 text-zinc-500 line-through"
+                    }`}
+                    title={`Toggle ${label} mask overlay`}
+                  >
+                    <span>{label.split(" ")[0]}</span>
+                    {segCount > 0 && (
+                      <span className="ml-1 rounded bg-zinc-700/60 px-1 text-[9px] font-mono text-zinc-300">
+                        {segCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Hidden File Input */}
           <input
             type="file"
@@ -465,6 +532,38 @@ export default function ElevaiDashboard() {
                     alt={viewMode === "modernized" ? "Modernized Inpainted Preview" : "Raw Cabin Scan"}
                     className="h-full w-full object-cover transition-opacity duration-300"
                   />
+
+                  {/* Interactive SVG Segmentation Overlays when in Existing inspection view */}
+                  {viewMode === "existing" && (
+                    <SegmentOverlay
+                      segments={segments}
+                      visibleCategories={visibleLayers}
+                      hoveredSegment={hoveredSegment}
+                      onHoverSegment={setHoveredSegment}
+                    />
+                  )}
+
+                  {/* Hovered segment indicator tooltip */}
+                  {viewMode === "existing" && hoveredSegment && (
+                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+                      {(() => {
+                        const activeSeg = segments.find((s) => s.id === hoveredSegment);
+                        if (!activeSeg) return null;
+                        return (
+                          <div className="flex items-center space-x-2 rounded-md bg-zinc-950/90 px-3 py-1 text-xs border border-zinc-700 shadow-xl backdrop-blur-md">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: activeSeg.color }}
+                            />
+                            <span className="font-semibold text-zinc-100">{activeSeg.label}</span>
+                            <span className="font-mono text-[10px] text-zinc-400">
+                              ({(activeSeg.confidence * 100).toFixed(0)}% conf)
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   {/* Rendering Spinner Overlay */}
                   {rendering && (

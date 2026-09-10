@@ -12,14 +12,19 @@ class CabinSegmenter:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             self.device = device
+        self._detector = None
 
-        print(f"[*] Initializing zero-shot detector on device: {self.device}")
-        # Using Owl-ViT / OWLv2 for open-vocabulary cabin component detection
-        self.detector = pipeline(
-            model="google/owlv2-base-patch16-ensemble",
-            task="zero-shot-object-detection",
-            device=0 if self.device == "cuda" else -1
-        )
+    @property
+    def detector(self):
+        if self._detector is None:
+            print(f"[*] Initializing zero-shot detector on device: {self.device}")
+            # Using Owl-ViT / OWLv2 for open-vocabulary cabin component detection
+            self._detector = pipeline(
+                model="google/owlv2-base-patch16-ensemble",
+                task="zero-shot-object-detection",
+                device=0 if self.device == "cuda" else -1
+            )
+        return self._detector
 
     def segment_cabin(self, image_path: str, output_mask_dir: str):
         os.makedirs(output_mask_dir, exist_ok=True)
@@ -109,3 +114,18 @@ class CabinSegmenter:
         print(f"[+] Segmentation complete: {len(detected_components)} elements identified.")
         print(f"[+] Preview saved to: {overlay_path}")
         return detected_components
+
+    def segment_scene(self, scene_dir: str):
+        image_path = os.path.join(scene_dir, "cabin_view.jpg")
+        if not os.path.exists(image_path):
+            image_path = os.path.join(scene_dir, "raw.jpg")
+        output_dir = os.path.join(scene_dir, "masks")
+        meta_path = os.path.join(output_dir, "detected_components.json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("components", [])
+            except Exception:
+                pass
+        return self.segment_cabin(image_path, output_dir)
