@@ -278,53 +278,48 @@ def run_calibration(payload: SceneActionRequest):
 def run_segmentation(payload: SceneActionRequest):
     scene_dir = BASE_DIR / "data" / "scenes" / payload.scene_id
     if not scene_dir.exists():
-        scene_dir = BASE_DIR / "data" / "scenes" / "scene_01_passenger"
+        raise HTTPException(status_code=404, detail=f"Scene folder '{payload.scene_id}' not found.")
 
     segmenter = get_segmenter()
     try:
         raw_result = segmenter.segment_scene(scene_dir=str(scene_dir))
 
-        # Structured polygons and bounding boxes for UI overlays
-        segments = [
-            {
-                "id": "ceiling",
-                "label": "Ceiling Structure",
-                "category": "ceiling_lighting",
-                "color": "#a855f7",
-                "polygon": [[0.0, 0.0], [1.0, 0.0], [0.88, 0.16], [0.12, 0.16]],
-                "confidence": 0.94
-            },
-            {
-                "id": "back_wall",
-                "label": "Back Wall Panel",
-                "category": "wall_panel",
-                "color": "#3b82f6",
-                "polygon": [[0.12, 0.16], [0.88, 0.16], [0.88, 0.82], [0.12, 0.82]],
-                "confidence": 0.96
-            },
-            {
-                "id": "flooring",
-                "label": "Cabin Subfloor",
-                "category": "flooring",
-                "color": "#f59e0b",
-                "polygon": [[0.12, 0.82], [0.88, 0.82], [1.0, 1.0], [0.0, 1.0]],
-                "confidence": 0.98
-            },
-            {
-                "id": "cop",
-                "label": "Car Operating Panel",
-                "category": "car_operating_panel",
-                "color": "#10b981",
-                "polygon": [[0.16, 0.28], [0.28, 0.28], [0.28, 0.80], [0.16, 0.80]],
-                "confidence": 0.91
-            }
-        ]
+        category_map = {
+            "wall_panel": ("wall_panel", "#3b82f6", "Wall panel"),
+            "cop": ("car_operating_panel", "#10b981", "Car operating panel"),
+            "ceiling": ("ceiling_lighting", "#a855f7", "Ceiling / lighting"),
+            "floor": ("flooring", "#f59e0b", "Flooring"),
+            "doors": ("doors", "#06b6d4", "Doors"),
+            "display_unit": ("display_unit", "#f97316", "Display unit")
+        }
+        segments = []
+        for detection in raw_result:
+            category_info = category_map.get(detection.get("category"))
+            box = detection.get("bbox_normalized")
+            if category_info is None or not isinstance(box, list) or len(box) != 4:
+                continue
+            top, left, bottom, right = [min(1.0, max(0.0, float(value))) for value in box]
+            if bottom <= top or right <= left:
+                continue
+            category, color, label = category_info
+            confidence = float(detection.get("confidence", 0.0))
+            segments.append({
+                "id": detection.get("component_id", f"{category}_{len(segments)}"),
+                "label": label,
+                "category": category,
+                "color": color,
+                "polygon": [[left, top], [right, top], [right, bottom], [left, bottom]],
+                "confidence": round(confidence, 3),
+                "review_required": confidence < 0.45,
+                "geometry_source": "detector_bounding_box"
+            })
 
         return {
             "status": "success",
             "scene_id": scene_dir.name,
             "segments": segments,
-            "raw_detections": raw_result
+            "raw_detections": raw_result,
+            "geometry_note": "Overlays show detector bounding boxes, not pixel-accurate segmentation masks. Verify them before using them for a proposal."
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Segmentation failure: {str(e)}")
