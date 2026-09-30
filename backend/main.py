@@ -18,6 +18,7 @@ if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
 from services.rules_engine import RulesEngine
+from services.recommender import RecommendationEngine
 from services.calibrator import CabinCalibrator
 from services.segmenter import CabinSegmenter
 from services.inpainter import CabinInpainter
@@ -49,6 +50,7 @@ app.mount("/static/scenes", StaticFiles(directory=str(scenes_static_dir)), name=
 # Service Singletons (Lazy initialized or pre-loaded)
 # -----------------------------------------------------------------------------
 rules_engine = RulesEngine()
+recommendation_engine = RecommendationEngine(rules_engine)
 
 _calibrator: Optional[CabinCalibrator] = None
 _segmenter: Optional[CabinSegmenter] = None
@@ -89,6 +91,9 @@ class EvaluateRequest(BaseModel):
         default=None,
         description="Optional full site measurement payload. If omitted, scene_01_passenger data is used."
     )
+
+class RecommendRequest(BaseModel):
+    site_measurements: Dict[str, Any] = Field(..., description="Measured site envelope used for option screening")
 
 class SceneActionRequest(BaseModel):
     scene_id: str = Field(default="scene_01_passenger", description="Target scene folder name inside data/scenes/")
@@ -149,6 +154,10 @@ def evaluate_configuration(payload: EvaluateRequest):
         selected_skus=payload.selected_skus
     )
     return result
+
+@app.post("/api/v1/recommendations")
+def recommend_configurations(payload: RecommendRequest):
+    return recommendation_engine.recommend(payload.site_measurements)
 
 @app.post("/api/v1/scene/upload")
 async def upload_cabin_scene(file: UploadFile = File(...)):
