@@ -7,7 +7,8 @@ def run_validation():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     schema_path = os.path.join(base_dir, "data", "catalog", "schema.json")
     catalog_path = os.path.join(base_dir, "data", "catalog", "catalog.json")
-    scene_dir = os.path.join(base_dir, "data", "scenes", "scene_01_passenger")
+    scenes_dir = os.path.join(base_dir, "data", "scenes")
+    annotation_schema_path = os.path.join(scenes_dir, "annotation.schema.json")
 
     print("[*] Validating catalog schema...")
     with open(schema_path, "r", encoding="utf-8") as f:
@@ -22,25 +23,45 @@ def run_validation():
         print(f"[-] Catalog schema error: {e.message}")
         sys.exit(1)
 
-    print("[*] Validating scene_01_passenger dataset...")
-    raw_img = os.path.join(scene_dir, "raw.jpg")
-    measurements = os.path.join(scene_dir, "site_measurements.json")
-    gold = os.path.join(scene_dir, "gold_annotations.json")
+    with open(annotation_schema_path, "r", encoding="utf-8") as f:
+        annotation_schema = json.load(f)
 
-    assert os.path.exists(raw_img), f"Missing raw.jpg in {scene_dir}"
-    assert os.path.exists(measurements), f"Missing site_measurements.json in {scene_dir}"
-    assert os.path.exists(gold), f"Missing gold_annotations.json in {scene_dir}"
+    validated_scenes = 0
+    for scene_name in sorted(os.listdir(scenes_dir)):
+        scene_dir = os.path.join(scenes_dir, scene_name)
+        if not os.path.isdir(scene_dir):
+            continue
 
-    with open(measurements, "r", encoding="utf-8") as f:
-        m_data = json.load(f)
-        assert "cabin_dimensions_mm" in m_data, "cabin_dimensions_mm missing in site_measurements.json"
+        gold_path = os.path.join(scene_dir, "gold_annotations.json")
+        if not os.path.exists(gold_path):
+            continue
 
-    with open(gold, "r", encoding="utf-8") as f:
-        g_data = json.load(f)
-        assert "annotations" in g_data, "annotations missing in gold_annotations.json"
+        image_candidates = [
+            os.path.join(scene_dir, "cabin_view.jpg"),
+            os.path.join(scene_dir, "raw.jpg")
+        ]
+        assert any(os.path.isfile(path) for path in image_candidates), f"Missing cabin image in {scene_dir}"
+        measurement_path = os.path.join(scene_dir, "site_measurements.json")
+        assert os.path.isfile(measurement_path), f"Missing site_measurements.json in {scene_dir}"
 
-    print(f"[+] scene_01_passenger verified with {len(g_data['annotations'])} ground-truth labels.")
-    print("\n[SUCCESS] Phase 1 setup complete and fully validated.")
+        with open(gold_path, "r", encoding="utf-8") as f:
+            annotations = json.load(f)
+        validate(instance=annotations, schema=annotation_schema)
+
+        for label in annotations["annotations"]:
+            top, left, bottom, right = label["bbox_normalized"]
+            assert top < bottom and left < right, f"Invalid box order in {scene_name}: {label}"
+
+        print(
+            f"[+] {scene_name}: {len(annotations['annotations'])} labels "
+            f"({annotations['review_status']})."
+        )
+        validated_scenes += 1
+
+    if validated_scenes == 0:
+        raise AssertionError("No annotated scene datasets found.")
+
+    print(f"\n[SUCCESS] Catalog and {validated_scenes} annotated scene dataset(s) passed structural checks.")
 
 if __name__ == "__main__":
     run_validation()

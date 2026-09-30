@@ -1,26 +1,37 @@
 {
+  "schema_version": "1.0",
   "scene_id": "scene_01_passenger",
   "image_file": "raw.jpg",
+  "review_status": "provisional",
+  "source": {
+    "description": "Source details were not recorded with the original repository asset.",
+    "license_or_permission": "Not documented; confirm before external distribution.",
+    "verified_by": "unverified"
+  },
   "annotations": [
     {
       "label": "car_operating_panel",
       "bbox_normalized": [0.41, 0.75, 0.63, 0.80],
-      "category_id": "car_operating_panel"
+      "category_id": "car_operating_panel",
+      "visibility": "visible"
     },
     {
       "label": "back_wall",
       "bbox_normalized": [0.19, 0.32, 0.77, 0.71],
-      "category_id": "wall_panel"
+      "category_id": "wall_panel",
+      "visibility": "visible"
     },
     {
       "label": "ceiling",
       "bbox_normalized": [0.08, 0.29, 0.19, 0.73],
-      "category_id": "ceiling_lighting"
+      "category_id": "ceiling_lighting",
+      "visibility": "visible"
     },
     {
       "label": "floor",
       "bbox_normalized": [0.80, 0.23, 0.98, 0.79],
-      "category_id": "flooring"
+      "category_id": "flooring",
+      "visibility": "visible"
     }
   ]
 }

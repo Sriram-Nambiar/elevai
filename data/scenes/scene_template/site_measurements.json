@@ -1,0 +1,20 @@
+{
+  "scene_id": "replace_with_scene_id",
+  "measurement_status": "missing",
+  "cabin_dimensions_mm": null,
+  "max_allowable_flooring_thickness_mm": null,
+  "existing_cop": {
+    "mounting_height_from_floor_mm": null,
+    "panel_width_mm": null,
+    "panel_height_mm": null
+  },
+  "door_opening_width_mm": null,
+  "unknowns": [
+    "cabin_dimensions_mm",
+    "max_allowable_flooring_thickness_mm",
+    "existing_cop.mounting_height_from_floor_mm",
+    "existing_cop.panel_width_mm",
+    "existing_cop.panel_height_mm",
+    "door_opening_width_mm"
+  ]
+}
