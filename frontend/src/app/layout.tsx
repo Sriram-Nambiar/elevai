@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Elevai Studio — AI Elevator Modernization & EN 81-70 Compliance",
+  title: "Elevai Studio — Lift Modernization Planning",
   description: "End-to-end spatial compliance auditing, rules engine, and visual inpainting previews.",
 };
 

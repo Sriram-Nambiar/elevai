@@ -1,4 +1,5 @@
 import io
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
@@ -12,15 +13,16 @@ from reportlab.platypus import (
     Table,
     TableStyle,
     KeepTogether,
-    HRFlowable
+    HRFlowable,
+    Image as ReportLabImage,
 )
 
 
 class QuotePDFGenerator:
     """
     Publication-quality PDF Quotation & Engineering Spec Sheet generator for Elevai.
-    Conforms to EN 81-70 compliance reporting standards with custom styling,
-    spatial envelope grid, verdict banners, and itemized BOM tables.
+    Produces an explicitly unapproved planning draft with a site envelope,
+    prototype fit-screen results, unknowns, and an itemized BOM.
     """
 
     def __init__(self):
@@ -135,16 +137,28 @@ class QuotePDFGenerator:
         self,
         evaluation: Dict[str, Any],
         cabin_dimensions_mm: Optional[Dict[str, int]] = None,
-        max_allowable_flooring_thickness_mm: int = 12
+        max_allowable_flooring_thickness_mm: Optional[int] = None,
+        site_measurements: Optional[Dict[str, Any]] = None,
+        scene_id: Optional[str] = None,
+        reference_images: Optional[List[tuple[str, str]]] = None,
     ) -> bytes:
         """
-        Generates in-memory PDF binary stream containing complete spatial envelope,
-        EN 81-70 compliance verdict, warnings, and itemized BOM.
+        Generates an in-memory draft proposal with fit-screen results, assumptions,
+        unknowns, and reviewer sign-off fields.
         """
-        dims = cabin_dimensions_mm or {"width": 1200, "depth": 1400, "height": 2350}
-        c_width = dims.get("width", 1200)
-        c_depth = dims.get("depth", 1400)
-        c_height = dims.get("height", 2350)
+        site_measurements = site_measurements or {}
+        dims = cabin_dimensions_mm or site_measurements.get("cabin_dimensions_mm") or {}
+        c_width = dims.get("width")
+        c_depth = dims.get("depth")
+        c_height = dims.get("height")
+        max_allowable_flooring_thickness_mm = (
+            max_allowable_flooring_thickness_mm
+            if max_allowable_flooring_thickness_mm is not None
+            else site_measurements.get("max_allowable_flooring_thickness_mm")
+        )
+
+        def mm_text(value):
+            return f"{value:g} mm" if isinstance(value, (int, float)) else "Unknown"
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -165,12 +179,12 @@ class QuotePDFGenerator:
         # ---------------------------------------------------------------------
         header_table_data = [
             [
-                Paragraph("<b>ELEVAI MODERNIZATION SPECIFICATION & QUOTE</b>", self.title_style),
-                Paragraph(f"<b>QUOTE REF:</b> {quote_ref}<br/><b>DATE:</b> {now_str}", self.meta_style)
+                Paragraph("<b>DRAFT LIFT MODERNIZATION PROPOSAL</b>", self.title_style),
+                Paragraph(f"<b>REF:</b> {quote_ref}<br/><b>DATE:</b> {now_str}", self.meta_style)
             ],
             [
-                Paragraph("Standards Baseline: EN 81-70 Accessibility & Dimensional Compliance", self.subtitle_style),
-                Paragraph("<b>ENGINE:</b> Deterministic Rules v1.0", self.meta_style)
+                Paragraph("Catalog options and prototype dimensional screening · qualified review required", self.subtitle_style),
+                Paragraph(f"<b>SCENE:</b> {scene_id or 'Not provided'}<br/><b>STATUS:</b> DRAFT", self.meta_style)
             ]
         ]
         header_table = Table(header_table_data, colWidths=[360, 162])
@@ -187,7 +201,7 @@ class QuotePDFGenerator:
         # ---------------------------------------------------------------------
         # 2. Site Spatial Envelope Table (2x4 Grid)
         # ---------------------------------------------------------------------
-        story.append(Paragraph("SITE SPATIAL ENVELOPE (CALIBRATED CLEARANCES)", self.section_heading))
+        story.append(Paragraph("SITE MEASUREMENTS (USER-PROVIDED; NOT PHOTO-CALIBRATED)", self.section_heading))
 
         envelope_data = [
             [
@@ -197,10 +211,10 @@ class QuotePDFGenerator:
                 Paragraph("<b>Max Floor Sill Clearance</b>", self.cell_style_bold),
             ],
             [
-                Paragraph(f"{c_width} mm", self.cell_style),
-                Paragraph(f"{c_depth} mm", self.cell_style),
-                Paragraph(f"{c_height} mm", self.cell_style),
-                Paragraph(f"{max_allowable_flooring_thickness_mm} mm", self.cell_style),
+                Paragraph(mm_text(c_width), self.cell_style),
+                Paragraph(mm_text(c_depth), self.cell_style),
+                Paragraph(mm_text(c_height), self.cell_style),
+                Paragraph(mm_text(max_allowable_flooring_thickness_mm), self.cell_style),
             ]
         ]
         col_w = 522 / 4
@@ -217,18 +231,26 @@ class QuotePDFGenerator:
         story.append(envelope_table)
         story.append(Spacer(1, 10))
 
+        for caption, image_path in reference_images or []:
+            if os.path.isfile(image_path):
+                story.append(Paragraph(caption, self.section_heading))
+                story.append(ReportLabImage(image_path, width=250, height=210, kind="proportional"))
+                story.append(Spacer(1, 6))
+
         # ---------------------------------------------------------------------
-        # 3. Compliance Verdict Banner & Adjustment Warnings
+        # 3. Prototype fit-screen status and adjustment warnings
         # ---------------------------------------------------------------------
-        is_compliant = evaluation.get("is_compliant", False)
-        verdict_text = (
-            "APPROVED (Compliant with EN 81-70 & Spatial Tolerances)"
-            if is_compliant
-            else "REJECTED (Dimensional Clearance / Code Breach Detected)"
-        )
-        bg_color = self.c_appr_bg if is_compliant else self.c_rej_bg
-        text_color = self.c_appr_text if is_compliant else self.c_rej_text
-        border_color = self.c_appr_border if is_compliant else self.c_rej_border
+        status = evaluation.get("overall_status", "REVIEW_REQUIRED")
+        verdict_text = {
+            "GEOMETRY_CHECKS_PASSED": "DIMENSIONAL SCREEN PASSED — PROFESSIONAL REVIEW STILL REQUIRED",
+            "REJECTED": "FIT CHECK FAILED — DO NOT USE THIS CONFIGURATION",
+        }.get(status, "REVIEW REQUIRED — IMPORTANT INFORMATION IS MISSING")
+        if status == "GEOMETRY_CHECKS_PASSED":
+            bg_color, text_color, border_color = self.c_appr_bg, self.c_appr_text, self.c_appr_border
+        elif status == "REJECTED":
+            bg_color, text_color, border_color = self.c_rej_bg, self.c_rej_text, self.c_rej_border
+        else:
+            bg_color, text_color, border_color = self.c_warn_bg, self.c_warn_text, colors.HexColor("#fcd34d")
 
         verdict_style = ParagraphStyle(
             name="VerdictParagraph",
@@ -241,7 +263,7 @@ class QuotePDFGenerator:
         )
 
         verdict_table = Table(
-            [[Paragraph(f"<b>COMPLIANCE VERDICT:</b> {verdict_text}", verdict_style)]],
+            [[Paragraph(f"<b>PROTOTYPE FIT SCREEN:</b> {verdict_text}", verdict_style)]],
             colWidths=[522]
         )
         verdict_table.setStyle(TableStyle([
@@ -259,7 +281,7 @@ class QuotePDFGenerator:
         if violations:
             story.append(Spacer(1, 6))
             violation_paragraphs = [
-                Paragraph(f"<b>Fatal Breach:</b> {v}", ParagraphStyle(
+                    Paragraph(f"<b>Fit check issue:</b> {v}", ParagraphStyle(
                     name="ViolItem",
                     parent=self.styles["Normal"],
                     fontName="Helvetica",
@@ -306,6 +328,14 @@ class QuotePDFGenerator:
             ]))
             story.append(warn_table)
 
+        missing_information = evaluation.get("missing_information", [])
+        story.append(Paragraph("UNKNOWN OR MISSING INFORMATION", self.section_heading))
+        if missing_information:
+            for missing in missing_information:
+                story.append(Paragraph(f"• {missing}", self.cell_style))
+        else:
+            story.append(Paragraph("No required fit inputs were missing for this prototype screen.", self.cell_style))
+
         story.append(Spacer(1, 10))
 
         # ---------------------------------------------------------------------
@@ -327,26 +357,29 @@ class QuotePDFGenerator:
         for item in bom_items:
             sku = item.get("sku_id", "-")
             name = item.get("name", sku)
-            qty = item.get("quantity", 1)
-            unit_cost = item.get("unit_cost_inr", 0.0)
-            ext_cost = item.get("extended_cost_inr", qty * unit_cost)
+            qty = item.get("quantity")
+            unit_cost = item.get("unit_cost_inr")
+            ext_cost = item.get("extended_cost_inr")
+
+            def money_text(value):
+                return f"Rs. {value:,.2f}" if isinstance(value, (int, float)) else "Pending fit"
 
             bom_table_data.append([
                 Paragraph(f"<b>{sku}</b>", self.cell_style),
                 Paragraph(name, self.cell_style),
-                Paragraph(str(qty), self.cell_style_right),
-                Paragraph(f"Rs. {unit_cost:,.2f}", self.cell_style_right),
-                Paragraph(f"Rs. {ext_cost:,.2f}", self.cell_style_right),
+                Paragraph(str(qty) if qty is not None else "—", self.cell_style_right),
+                Paragraph(money_text(unit_cost), self.cell_style_right),
+                Paragraph(money_text(ext_cost), self.cell_style_right),
             ])
 
         # Summary Total Row
-        total_cost = evaluation.get("total_estimated_cost_inr", 0.0)
+        total_cost = evaluation.get("total_estimated_cost_inr")
         bom_table_data.append([
             Paragraph("<b>TOTAL ESTIMATED MODERNIZATION COST</b>", self.cell_style_bold),
             "",
             "",
             "",
-            Paragraph(f"<b>Rs. {total_cost:,.2f}</b>", self.cell_style_right_bold)
+            Paragraph(f"<b>{money_text(total_cost)}</b>", self.cell_style_right_bold)
         ])
 
         bom_col_widths = [105, 205, 38, 87, 87]
@@ -379,22 +412,36 @@ class QuotePDFGenerator:
         story.append(bom_table)
 
         # ---------------------------------------------------------------------
-        # 5. Footer / Commercial Terms
+        # 5. Assumptions and qualified reviewer gate
         # ---------------------------------------------------------------------
-        story.append(Spacer(1, 14))
-        footer_text = (
-            "<b>Note:</b> Quotation is valid for 30 days from generation date. "
-            "All dimensions are subject to physical site re-survey by authorized technicians prior to manufacture. "
-            "Hardware adheres to standard EN 81-70 accessibility criteria."
-        )
-        story.append(Paragraph(footer_text, ParagraphStyle(
-            name="QuoteFooter",
-            parent=self.styles["Normal"],
-            fontName="Helvetica-Oblique",
-            fontSize=7.5,
-            leading=10,
-            textColor=self.c_subtitle
-        )))
+        story.append(Paragraph("ASSUMPTIONS AND SCOPE LIMITS", self.section_heading))
+        assumptions = [
+            "All dimensions are user-entered site measurements; the photograph and relative-depth model do not provide metric scale.",
+            "Prices and product attributes are demonstration catalog values; verify current manufacturer specifications and availability.",
+            "Estimate covers listed catalog materials only. Installation labor, taxes, freight, electrical changes, and statutory inspections are excluded.",
+            "Surface renderings are procedural visual concepts and do not certify fit, finish, accessibility, or code compliance.",
+            "A qualified lift professional must inspect the site and approve the selected products and work scope before customer issue.",
+        ]
+        for assumption in assumptions:
+            story.append(Paragraph(f"• {assumption}", self.cell_style))
+
+        story.append(Spacer(1, 10))
+        approval_table = Table([
+            [Paragraph("<b>QUALIFIED REVIEWER APPROVAL</b>", self.cell_style_bold)],
+            [Paragraph("Reviewer name / role: _________________________________________________", self.cell_style)],
+            [Paragraph("Decision:   [ ] Approve   [ ] Revise   [ ] Reject     Date: __________________", self.cell_style)],
+            [Paragraph("This document remains a draft until reviewed and signed. Do not issue to a customer as an approved proposal.", self.cell_style)],
+        ], colWidths=[522])
+        approval_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), self.c_bg_light),
+            ("BOX", (0, 0), (-1, -1), 0.8, self.c_border_dark),
+            ("INNERGRID", (0, 0), (-1, -1), 0.3, self.c_border),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(approval_table)
 
         # Build document
         doc.build(story)

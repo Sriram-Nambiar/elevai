@@ -7,6 +7,7 @@ PLANNED_CATEGORIES = (
     "flooring",
     "car_operating_panel",
     "ceiling_lighting",
+    "doors",
 )
 
 

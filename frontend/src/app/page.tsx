@@ -74,7 +74,8 @@ const CATEGORY_ORDER = [
   "wall_panel",
   "flooring",
   "car_operating_panel",
-  "ceiling_lighting"
+  "ceiling_lighting",
+  "doors"
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -82,6 +83,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   flooring: "Cabin Flooring & Sill",
   car_operating_panel: "Car Operating Panel",
   ceiling_lighting: "Ceiling Canopy & Lighting",
+  doors: "Door Cladding",
 };
 
 const CATEGORY_TAGS: Record<string, { label: string; color: string }> = {
@@ -89,6 +91,7 @@ const CATEGORY_TAGS: Record<string, { label: string; color: string }> = {
   flooring: { label: "Sill Safety", color: "border-amber-500/30 bg-amber-500/10 text-amber-400" },
   car_operating_panel: { label: "Accessibility", color: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
   ceiling_lighting: { label: "Illumination", color: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
+  doors: { label: "Doors", color: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400" },
 };
 
 const LAYER_CHIPS: { key: string; label: string; color: string }[] = [
@@ -96,6 +99,7 @@ const LAYER_CHIPS: { key: string; label: string; color: string }[] = [
   { key: "flooring", label: "Floor", color: "#f59e0b" },
   { key: "ceiling_lighting", label: "Ceiling", color: "#a855f7" },
   { key: "car_operating_panel", label: "COP", color: "#10b981" },
+  { key: "doors", label: "Doors", color: "#06b6d4" },
 ];
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -125,9 +129,11 @@ export default function ElevaiDashboard() {
     `${API_BASE}/static/scenes/scene_01_passenger/after_preview_change_mask.png`
   );
   const [showChangeMask, setShowChangeMask] = useState(false);
+  const [previewReviewNote, setPreviewReviewNote] = useState<string>("Procedural concept only; qualified review required.");
   const [cabinDims, setCabinDims] = useState<{ width: number | null; depth: number | null; height: number | null }>({ width: 1200, depth: 1400, height: 2350 });
   const [maxFlooringThickness, setMaxFlooringThickness] = useState<number | null>(12);
   const [copMountHeight, setCopMountHeight] = useState<number | null>(1000);
+  const [doorOpeningWidth, setDoorOpeningWidth] = useState<number | null>(800);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [recommending, setRecommending] = useState(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -140,6 +146,7 @@ export default function ElevaiDashboard() {
     cabinDims.height,
     maxFlooringThickness,
     copMountHeight,
+    doorOpeningWidth,
   ].every((value) => value !== null && Number.isFinite(value) && value > 0);
 
   const siteMeasurements = useMemo(() => ({
@@ -147,7 +154,8 @@ export default function ElevaiDashboard() {
     cabin_dimensions_mm: cabinDims,
     max_allowable_flooring_thickness_mm: maxFlooringThickness,
     existing_cop: { mounting_height_from_floor_mm: copMountHeight },
-  }), [activeScene, cabinDims, maxFlooringThickness, copMountHeight]);
+    door_opening_width_mm: doorOpeningWidth,
+  }), [activeScene, cabinDims, maxFlooringThickness, copMountHeight, doorOpeningWidth]);
 
   // Category visibility and segmentation state
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({
@@ -155,6 +163,7 @@ export default function ElevaiDashboard() {
     flooring: true,
     car_operating_panel: true,
     ceiling_lighting: true,
+    doors: true,
   });
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -210,6 +219,10 @@ export default function ElevaiDashboard() {
       if (data.change_mask_url) {
         setChangeMaskUrl(`${API_BASE}${data.change_mask_url}?t=${Date.now()}`);
       }
+      const unrendered = data.not_rendered_categories?.length
+        ? ` Not rendered in this preview: ${data.not_rendered_categories.join(", ")}.`
+        : "";
+      setPreviewReviewNote(`${data.visual_disclaimer || "Concept only; human review required."}${unrendered}`);
     } catch (err: any) {
       console.error("Preview rendering failed:", err);
     } finally {
@@ -350,13 +363,13 @@ export default function ElevaiDashboard() {
       setExportingPdf(true);
       setError(null);
 
-      const res = await fetch("http://127.0.0.1:8000/api/v1/quote/export", {
+      const res = await fetch(`${API_BASE}/api/v1/quote/export`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selected_skus: activeList,
-          cabin_dimensions_mm: cabinDims,
-          max_allowable_flooring_thickness_mm: maxFlooringThickness,
+          site_measurements: siteMeasurements,
+          scene_id: activeScene,
         }),
       });
 
@@ -368,7 +381,7 @@ export default function ElevaiDashboard() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "elevai_modernization_quote.pdf";
+      a.download = "elevai_draft_modernization_proposal.pdf";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -412,6 +425,7 @@ export default function ElevaiDashboard() {
       setCabinDims({ width: null, depth: null, height: null });
       setMaxFlooringThickness(null);
       setCopMountHeight(null);
+      setDoorOpeningWidth(null);
       setEvaluation(null);
       setRecommendations([]);
 
@@ -624,7 +638,7 @@ export default function ElevaiDashboard() {
               {uploading ? (
                 <div className="flex flex-col items-center justify-center space-y-2.5 text-zinc-400 p-6 text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
-                  <span className="text-xs font-medium">Ingesting cabin scan & calibrating depth...</span>
+                  <span className="text-xs font-medium">Processing cabin image; fit checks wait for site measurements...</span>
                 </div>
               ) : (
                 <>
@@ -639,6 +653,11 @@ export default function ElevaiDashboard() {
                       alt="Mask showing regions changed by the procedural preview"
                       className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-screen"
                     />
+                  )}
+                  {viewMode === "modernized" && (
+                    <div className="absolute bottom-2 left-2 right-2 z-10 rounded bg-black/75 px-2 py-1 text-[9px] leading-snug text-amber-100">
+                      {previewReviewNote}
+                    </div>
                   )}
 
                   {/* Interactive SVG Segmentation Overlays when in Existing inspection view */}
@@ -752,6 +771,7 @@ export default function ElevaiDashboard() {
                   ["Cabin height", cabinDims.height, (value: number | null) => setCabinDims((current) => ({ ...current, height: value }))],
                   ["Sill allowance", maxFlooringThickness, setMaxFlooringThickness],
                   ["COP mount height", copMountHeight, setCopMountHeight],
+                  ["Door opening width", doorOpeningWidth, setDoorOpeningWidth],
                 ] as [string, number | null, (value: number | null) => void][]).map(([label, value, setter]) => (
                   <label key={label} className="space-y-1 text-zinc-400">
                     <span>{label}</span>
@@ -775,7 +795,7 @@ export default function ElevaiDashboard() {
               </button>
               {!measurementsComplete && (
                 <p className="mt-2 text-[10px] text-amber-300/80">
-                  Fit checks and recommendations stay on hold until all five site measurements are entered.
+                  Fit checks and recommendations stay on hold until all six site measurements are entered.
                 </p>
               )}
             </div>
@@ -968,7 +988,7 @@ export default function ElevaiDashboard() {
             <div className="flex items-center space-x-2">
               <Boxes className="h-4 w-4 text-zinc-400" />
               <h2 className="text-xs font-semibold tracking-wider uppercase text-zinc-300">
-                Compliance & BOM
+                Fit Screen & BOM
               </h2>
             </div>
             <button
@@ -977,7 +997,7 @@ export default function ElevaiDashboard() {
               className="inline-flex items-center space-x-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 transition cursor-pointer disabled:opacity-50"
             >
               <Download className="h-3 w-3" />
-              <span>PDF Export</span>
+                  <span>Draft PDF</span>
             </button>
           </div>
 
@@ -1049,7 +1069,7 @@ export default function ElevaiDashboard() {
                   ) : (
                     <>
                       <FileText className="h-4 w-4 text-amber-400 group-hover:scale-105 transition-transform" />
-                      <span>Download Engineering Spec Sheet (PDF)</span>
+                      <span>Download Draft Proposal (PDF)</span>
                       <Download className="h-3.5 w-3.5 ml-1 text-amber-400/80" />
                     </>
                   )}
@@ -1174,7 +1194,7 @@ export default function ElevaiDashboard() {
                 ) : (
                   <>
                     <FileText className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                    <span>Download Engineering Spec Sheet (PDF)</span>
+                    <span>Download Draft Proposal (PDF)</span>
                     <Download className="h-3.5 w-3.5 ml-1 text-amber-400/80" />
                   </>
                 )}

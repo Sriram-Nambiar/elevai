@@ -373,7 +373,7 @@ class CabinInpainter:
     ) -> Tuple[Dict[str, np.ndarray], str]:
         """
         Locates cabin surfaces (back_wall, left_wall, right_wall, floor, ceiling, cop)
-        using gold annotations or calibrated scene geometry.
+        using scene annotations, detector boxes, or clearly reported fallbacks.
         """
         gold_path = os.path.join(scene_dir, "gold_annotations.json")
         detections_path = os.path.join(scene_dir, "masks", "detected_components.json")

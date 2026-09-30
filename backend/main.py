@@ -2,6 +2,7 @@ import os
 import json
 import sys
 import uuid
+import re
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -26,7 +27,7 @@ from services.pdf_generator import QuotePDFGenerator
 
 app = FastAPI(
     title="Elevai API",
-    description="AI-driven elevator modernization, spatial compliance auditing (EN 81-70), and procedural inpainting previews.",
+    description="Measured-site lift modernization planning, catalog fit screening, and procedural concept previews.",
     version="1.0.0"
 )
 
@@ -109,9 +110,14 @@ class ExportQuoteRequest(BaseModel):
         description="Clear cabin dimensions width, depth, height in mm"
     )
     max_allowable_flooring_thickness_mm: Optional[int] = Field(
-        default=12,
+        default=None,
         description="Maximum floor sill threshold clearance in mm"
     )
+    site_measurements: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Explicit site measurements; missing fields remain unknown in the draft."
+    )
+    scene_id: Optional[str] = Field(default=None, description="Scene used for reference images")
 
 
 # -----------------------------------------------------------------------------
@@ -242,16 +248,14 @@ def render_preview(payload: PreviewRenderRequest):
 
 @app.post("/api/v1/quote/export")
 def export_quotation_pdf(payload: ExportQuoteRequest):
-    dims = payload.cabin_dimensions_mm or {"width": 1200, "depth": 1400, "height": 2350}
-    max_floor_thk = payload.max_allowable_flooring_thickness_mm or 12
-
-    site_measurements = {
-        "cabin_dimensions_mm": dims,
-        "max_allowable_flooring_thickness_mm": max_floor_thk,
-        "existing_cop": {
-            "mounting_height_from_floor_mm": 1000
-        }
+    site_measurements = payload.site_measurements or {
+        "cabin_dimensions_mm": payload.cabin_dimensions_mm,
+        "max_allowable_flooring_thickness_mm": payload.max_allowable_flooring_thickness_mm,
+        "existing_cop": {},
     }
+    dims = site_measurements.get("cabin_dimensions_mm")
+    dims = dims if isinstance(dims, dict) else {}
+    max_floor_thk = site_measurements.get("max_allowable_flooring_thickness_mm")
 
     # Evaluate configuration using deterministic rules engine
     evaluation = rules_engine.evaluate_configuration(
@@ -260,16 +264,33 @@ def export_quotation_pdf(payload: ExportQuoteRequest):
     )
 
     pdf_gen = get_pdf_generator()
+    reference_images = []
+    if payload.scene_id and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", payload.scene_id):
+        scene_dir = (BASE_DIR / "data" / "scenes" / payload.scene_id).resolve()
+        scenes_root = (BASE_DIR / "data" / "scenes").resolve()
+        if scene_dir.parent == scenes_root:
+            source_image = next((path for path in (
+                scene_dir / "cabin_view.jpg", scene_dir / "raw.jpg"
+            ) if path.is_file()), None)
+            preview_image = scene_dir / "after_preview.jpg"
+            if source_image:
+                reference_images.append(("Uploaded / reference scene", str(source_image)))
+            if preview_image.is_file():
+                reference_images.append(("Procedural concept preview", str(preview_image)))
+
     try:
         pdf_bytes = pdf_gen.generate_pdf(
             evaluation=evaluation,
             cabin_dimensions_mm=dims,
-            max_allowable_flooring_thickness_mm=max_floor_thk
+            max_allowable_flooring_thickness_mm=max_floor_thk,
+            site_measurements=site_measurements,
+            scene_id=payload.scene_id,
+            reference_images=reference_images,
         )
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=elevai_modernization_quote.pdf"}
+            headers={"Content-Disposition": "attachment; filename=elevai_draft_modernization_proposal.pdf"}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF generation failure: {str(e)}")
