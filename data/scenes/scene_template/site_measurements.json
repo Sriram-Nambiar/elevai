@@ -8,6 +8,7 @@
     "panel_width_mm": null,
     "panel_height_mm": null
   },
+  "component_measurements": [],
   "door_opening_width_mm": null,
   "unknowns": [
     "cabin_dimensions_mm",
