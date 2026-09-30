@@ -1,7 +1,13 @@
-import os
 import json
 import math
-from typing import Dict, List, Any
+import os
+from typing import Any, Dict, List, Optional
+
+
+# Demonstration fit allowance for field-trimmable ceiling products. This is a
+# prototype rule, not a manufacturer-approved installation tolerance.
+CEILING_FIELD_TRIM_TOLERANCE_MM = 200
+
 
 class RulesEngine:
     def __init__(self, catalog_path: str = None):
@@ -13,151 +19,231 @@ class RulesEngine:
             catalog_data = json.load(f)
 
         items = catalog_data.get("catalog_items", []) if isinstance(catalog_data, dict) else catalog_data
-
-        # Index catalog by sku_id (with fallbacks for sku / id)
         self.catalog = {
-            (item.get("sku_id") or item.get("sku") or item.get("id")): item
+            item.get("sku_id") or item.get("sku") or item.get("id"): item
             for item in items
-            if (item.get("sku_id") or item.get("sku") or item.get("id")) is not None
+            if item.get("sku_id") or item.get("sku") or item.get("id")
         }
+
+    @staticmethod
+    def _positive_number(value: Any) -> Optional[float]:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        if not math.isfinite(value) or value <= 0:
+            return None
+        return float(value)
 
     def evaluate_configuration(
         self,
         site_measurements: Dict[str, Any],
         selected_skus: List[str]
     ) -> Dict[str, Any]:
-        cabin_dims = site_measurements["cabin_dimensions_mm"]
-        c_width = cabin_dims["width"]
-        c_depth = cabin_dims["depth"]
-        c_height = cabin_dims["height"]
-        max_floor_thk = site_measurements.get("max_allowable_flooring_thickness_mm", 15)
+        site_measurements = site_measurements if isinstance(site_measurements, dict) else {}
+        raw_cabin_dims = site_measurements.get("cabin_dimensions_mm")
+        cabin_dims = raw_cabin_dims if isinstance(raw_cabin_dims, dict) else {}
+        cabin = {
+            key: self._positive_number(cabin_dims.get(key))
+            for key in ("width", "depth", "height")
+        }
+        max_floor_thickness = self._positive_number(
+            site_measurements.get("max_allowable_flooring_thickness_mm")
+        )
+        existing_cop = site_measurements.get("existing_cop")
+        existing_cop = existing_cop if isinstance(existing_cop, dict) else {}
+        cop_mount_height = self._positive_number(
+            existing_cop.get("mounting_height_from_floor_mm")
+        )
 
-        violations = []
-        warnings = []
-        bom_items = []
+        violations: List[str] = []
+        warnings: List[str] = []
+        missing_information: List[str] = []
+        bom_items: List[Dict[str, Any]] = []
         total_cost = 0.0
+        total_cost_complete = True
+
+        def require(value: Optional[float], name: str, item_missing: List[str]) -> bool:
+            if value is None:
+                item_missing.append(name)
+                if name not in missing_information:
+                    missing_information.append(name)
+                return False
+            return True
 
         for sku in selected_skus:
             if sku not in self.catalog:
-                violations.append(f"Unknown SKU '{sku}' not found in hardware catalog.")
+                violations.append(f"Unknown SKU '{sku}' is not in the bounded catalog.")
                 continue
 
             item = self.catalog[sku]
             category = item.get("category", "unknown")
-            dims = item.get("dimensions_mm", {})
-            unit_cost = item.get("unit_cost_inr", item.get("unit_price_usd", 0.0))
-            item_name = item.get("name", sku)
-            qty = 0
-            item_violations = []
+            dims = item.get("dimensions_mm") or {}
+            constraints = item.get("mounting_constraints") or {}
+            name = item.get("name", sku)
+            unit_cost = self._positive_number(item.get("unit_cost_inr"))
+            item_violations: List[str] = []
+            item_missing: List[str] = []
+            quantity: Optional[int] = None
 
-            # -----------------------------------------------------------------
-            # 1. Wall Panels
-            # -----------------------------------------------------------------
             if category == "wall_panel":
-                panel_h = dims.get("height", 0)
-                panel_w = dims.get("width", 1)
+                panel_h = self._positive_number(dims.get("height"))
+                panel_w = self._positive_number(dims.get("width"))
+                valid = all([
+                    require(cabin["height"], "cabin_dimensions_mm.height", item_missing),
+                    require(cabin["width"], "cabin_dimensions_mm.width", item_missing),
+                    require(cabin["depth"], "cabin_dimensions_mm.depth", item_missing),
+                    require(panel_h, f"catalog.{sku}.dimensions_mm.height", item_missing),
+                    require(panel_w, f"catalog.{sku}.dimensions_mm.width", item_missing),
+                ])
+                if valid:
+                    if panel_h > cabin["height"]:
+                        item_violations.append(
+                            f"Panel height {panel_h:g} mm exceeds cabin height {cabin['height']:g} mm."
+                        )
+                    elif cabin["height"] - panel_h > 200:
+                        warnings.append(
+                            f"{sku}: panel leaves {cabin['height'] - panel_h:g} mm above; verify the finishing detail."
+                        )
+                    quantity = math.ceil(cabin["width"] / panel_w) + 2 * math.ceil(cabin["depth"] / panel_w)
 
-                if panel_h > c_height:
-                    msg = f"Wall Panel [{sku}] height ({panel_h}mm) exceeds cabin height ({c_height}mm)."
-                    violations.append(msg)
-                    item_violations.append(msg)
-                elif (c_height - panel_h) > 200:
-                    warnings.append(
-                        f"Wall Panel [{sku}] height leaves a gap of {c_height - panel_h}mm. Top frieze panel required."
-                    )
-
-                back_wall_panels = math.ceil(c_width / panel_w) if panel_w > 0 else 0
-                side_wall_panels = math.ceil(c_depth / panel_w) * 2 if panel_w > 0 else 0
-                qty = back_wall_panels + side_wall_panels
-
-            # -----------------------------------------------------------------
-            # 2. Flooring
-            # -----------------------------------------------------------------
             elif category == "flooring":
-                # Check explicit thickness keys first; fallback to lowest dimension value
-                explicit_thk = dims.get("thickness_mm") or dims.get("thickness")
-                if explicit_thk is not None:
-                    thickness = explicit_thk
-                else:
-                    dim_values = [v for v in dims.values() if isinstance(v, (int, float)) and v > 0]
-                    thickness = min(dim_values) if dim_values else 0
+                thickness = self._positive_number(
+                    dims.get("thickness_mm") or dims.get("thickness")
+                )
+                pack_width = self._positive_number(dims.get("width_mm") or dims.get("width"))
+                pack_depth = self._positive_number(
+                    dims.get("length_mm") or dims.get("length") or dims.get("depth")
+                )
+                valid = all([
+                    require(cabin["width"], "cabin_dimensions_mm.width", item_missing),
+                    require(cabin["depth"], "cabin_dimensions_mm.depth", item_missing),
+                    require(max_floor_thickness, "max_allowable_flooring_thickness_mm", item_missing),
+                    require(thickness, f"catalog.{sku}.dimensions_mm.thickness_mm", item_missing),
+                    require(pack_width, f"catalog.{sku}.dimensions_mm.width", item_missing),
+                    require(pack_depth, f"catalog.{sku}.dimensions_mm.depth", item_missing),
+                ])
+                if valid:
+                    if thickness > max_floor_thickness:
+                        item_violations.append(
+                            f"Floor thickness {thickness:g} mm exceeds measured sill allowance {max_floor_thickness:g} mm."
+                        )
+                    cabin_area = cabin["width"] * cabin["depth"]
+                    pack_area = pack_width * pack_depth
+                    quantity = math.ceil(cabin_area / pack_area)
 
-                if thickness > max_floor_thk:
-                    msg = f"Flooring [{sku}] thickness ({thickness}mm) exceeds max sill clearance ({max_floor_thk}mm). Door sweep failure risk."
-                    violations.append(msg)
-                    item_violations.append(msg)
-
-                floor_area_m2 = (c_width * c_depth) / 1_000_000.0
-                pack_l = dims.get("length_mm") or dims.get("length") or dims.get("depth", c_depth)
-                pack_w = dims.get("width_mm") or dims.get("width", c_width)
-                pack_coverage_m2 = (pack_l * pack_w) / 1_000_000.0
-
-                qty = math.ceil(floor_area_m2 / pack_coverage_m2) if pack_coverage_m2 > 0 else 1
-
-            # -----------------------------------------------------------------
-            # 3. Car Operating Panel (EN 81-70 / ADA)
-            # -----------------------------------------------------------------
             elif category == "car_operating_panel":
-                qty = 1
-                cop_h = dims.get("height", 0)
+                panel_h = self._positive_number(dims.get("height"))
+                valid = all([
+                    require(cabin["height"], "cabin_dimensions_mm.height", item_missing),
+                    require(cop_mount_height, "existing_cop.mounting_height_from_floor_mm", item_missing),
+                    require(panel_h, f"catalog.{sku}.dimensions_mm.height", item_missing),
+                ])
+                if valid:
+                    reach_limit = self._positive_number(constraints.get("interactive_reach_max_mm"))
+                    if reach_limit is None:
+                        require(None, f"catalog.{sku}.mounting_constraints.interactive_reach_max_mm", item_missing)
+                        valid = False
+                    else:
+                        if cop_mount_height > reach_limit:
+                            item_violations.append(
+                                f"Existing control mounting baseline {cop_mount_height:g} mm exceeds the catalog reach limit {reach_limit:g} mm."
+                            )
+                        if panel_h > cabin["height"]:
+                            item_violations.append(
+                                f"Panel height {panel_h:g} mm exceeds cabin height {cabin['height']:g} mm."
+                        )
+                if valid:
+                    quantity = 1
 
-                existing_cop = site_measurements.get("existing_cop", {})
-                mount_h = existing_cop.get("mounting_height_from_floor_mm", 1000)
-
-                interactive_max = item.get("mounting_constraints", {}).get("interactive_reach_max_mm", 1200)
-                if mount_h > interactive_max:
-                    msg = f"COP [{sku}] mount baseline ({mount_h}mm) violates EN 81-70 max reach limit ({interactive_max}mm)."
-                    violations.append(msg)
-                    item_violations.append(msg)
-
-                if cop_h > c_height:
-                    msg = f"COP [{sku}] height ({cop_h}mm) exceeds cabin vertical clearance ({c_height}mm)."
-                    violations.append(msg)
-                    item_violations.append(msg)
-
-            # -----------------------------------------------------------------
-            # 4. Ceiling Lighting (Field-Trimmable Canopies)
-            # -----------------------------------------------------------------
             elif category == "ceiling_lighting":
-                ceil_w = dims.get("width", 0)
-                ceil_l = dims.get("length", dims.get("depth", 0))
+                product_w = self._positive_number(dims.get("width"))
+                product_d = self._positive_number(dims.get("depth") or dims.get("length"))
+                valid = all([
+                    require(cabin["width"], "cabin_dimensions_mm.width", item_missing),
+                    require(cabin["depth"], "cabin_dimensions_mm.depth", item_missing),
+                    require(product_w, f"catalog.{sku}.dimensions_mm.width", item_missing),
+                    require(product_d, f"catalog.{sku}.dimensions_mm.depth", item_missing),
+                ])
+                if valid:
+                    oversize_w = max(0.0, product_w - cabin["width"])
+                    oversize_d = max(0.0, product_d - cabin["depth"])
+                    if oversize_w > CEILING_FIELD_TRIM_TOLERANCE_MM or oversize_d > CEILING_FIELD_TRIM_TOLERANCE_MM:
+                        item_violations.append(
+                            f"Ceiling exceeds the demonstration field-trim allowance ({CEILING_FIELD_TRIM_TOLERANCE_MM} mm). Confirm final fit with the manufacturer."
+                        )
+                    elif oversize_w or oversize_d:
+                        warnings.append(
+                            f"{sku}: field trimming up to {max(oversize_w, oversize_d):g} mm per axis would be required; confirm with the manufacturer."
+                        )
+                    quantity = 1
 
-                oversize_w = ceil_w - c_width
-                oversize_l = ceil_l - c_depth
-
-                if oversize_w > 200 or oversize_l > 200:
-                    msg = f"Ceiling [{sku}] dimensions ({ceil_w}x{ceil_l}mm) exceed cabin frame ({c_width}x{c_depth}mm) by >200mm. Exceeds site trimming tolerance."
-                    violations.append(msg)
-                    item_violations.append(msg)
-                elif oversize_w > 0 or oversize_l > 0:
-                    warnings.append(
-                        f"Ceiling [{sku}] ({ceil_w}x{ceil_l}mm) is oversized by {max(oversize_w, oversize_l)}mm. Field-trimming to {c_width}x{c_depth}mm required on site."
-                    )
-                qty = 1
+            elif category == "doors":
+                opening_width = self._positive_number(site_measurements.get("door_opening_width_mm"))
+                door_h = self._positive_number(dims.get("height"))
+                door_w = self._positive_number(dims.get("width"))
+                valid = all([
+                    require(opening_width, "door_opening_width_mm", item_missing),
+                    require(cabin["height"], "cabin_dimensions_mm.height", item_missing),
+                    require(door_h, f"catalog.{sku}.dimensions_mm.height", item_missing),
+                    require(door_w, f"catalog.{sku}.dimensions_mm.width", item_missing),
+                ])
+                if valid:
+                    if door_h > cabin["height"] or door_w * 2 < opening_width:
+                        item_violations.append(
+                            "Door-skin dimensions do not cover the measured opening; verify leaf geometry and clearances."
+                        )
+                    quantity = 1
 
             else:
-                qty = 1
+                item_missing.append(f"No fit rule is defined for catalog category '{category}'.")
+                if item_missing[-1] not in missing_information:
+                    missing_information.append(item_missing[-1])
 
-            item_cost = qty * unit_cost
-            total_cost += item_cost
+            if item_violations:
+                violations.extend(f"{sku}: {message}" for message in item_violations)
 
+            if quantity is None or unit_cost is None:
+                extended_cost = None
+                total_cost_complete = False
+            else:
+                extended_cost = round(quantity * unit_cost, 2)
+                total_cost += extended_cost
+
+            status = "FAIL" if item_violations else ("REVIEW" if item_missing else "PASS")
             bom_items.append({
                 "sku_id": sku,
-                "name": item_name,
+                "name": name,
                 "category": category,
-                "quantity": qty,
+                "quantity": quantity,
                 "unit_cost_inr": unit_cost,
-                "extended_cost_inr": round(item_cost, 2),
-                "status": "PASS" if len(item_violations) == 0 else "FAIL"
+                "extended_cost_inr": extended_cost,
+                "status": status,
+                "fit_reasons": item_violations,
+                "missing_information": item_missing,
             })
 
-        is_compliant = len(violations) == 0
+        if not selected_skus:
+            missing_information.append("Select at least one catalog item.")
 
+        if violations:
+            overall_status = "REJECTED"
+        elif missing_information:
+            overall_status = "REVIEW_REQUIRED"
+        else:
+            overall_status = "GEOMETRY_CHECKS_PASSED"
+
+        warnings.append(
+            "Prototype dimensional screening only; this result is not a code certification or installation approval."
+        )
         return {
-            "is_compliant": is_compliant,
-            "overall_status": "APPROVED" if is_compliant else "REJECTED",
+            "is_compliant": overall_status == "GEOMETRY_CHECKS_PASSED",
+            "overall_status": overall_status,
             "violations": violations,
             "warnings": warnings,
+            "missing_information": missing_information,
             "bill_of_materials": bom_items,
-            "total_estimated_cost_inr": round(total_cost, 2)
+            "total_estimated_cost_inr": round(total_cost, 2) if total_cost_complete else None,
+            "fit_tolerance_mm": {
+                "ceiling_field_trim_allowance": CEILING_FIELD_TRIM_TOLERANCE_MM
+            },
+            "review_required": True,
         }

@@ -43,19 +43,22 @@ interface BomItem {
   sku_id: string;
   name: string;
   category: string;
-  quantity: number;
-  unit_cost_inr: number;
-  extended_cost_inr: number;
-  status: "PASS" | "FAIL";
+  quantity: number | null;
+  unit_cost_inr: number | null;
+  extended_cost_inr: number | null;
+  status: "PASS" | "FAIL" | "REVIEW";
+  fit_reasons: string[];
+  missing_information: string[];
 }
 
 interface EvaluationResponse {
   is_compliant: boolean;
-  overall_status: "APPROVED" | "REJECTED";
+  overall_status: "GEOMETRY_CHECKS_PASSED" | "REJECTED" | "REVIEW_REQUIRED";
   violations: string[];
   warnings: string[];
+  missing_information: string[];
   bill_of_materials: BomItem[];
-  total_estimated_cost_inr: number;
+  total_estimated_cost_inr: number | null;
 }
 
 const CATEGORY_ORDER = [
@@ -68,7 +71,7 @@ const CATEGORY_ORDER = [
 const CATEGORY_LABELS: Record<string, string> = {
   wall_panel: "Wall Cladding Panels",
   flooring: "Cabin Flooring & Sill",
-  car_operating_panel: "Car Operating Panel (EN 81-70)",
+  car_operating_panel: "Car Operating Panel",
   ceiling_lighting: "Ceiling Canopy & Lighting",
 };
 
@@ -408,7 +411,7 @@ export default function ElevaiDashboard() {
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400">
-                Spatial Compliance Auditing (EN 81-70) & Generative Cabin Modernization
+                Dimension Fit Checks & Cabin Modernization Previews
               </p>
             </div>
           </div>
@@ -842,7 +845,9 @@ export default function ElevaiDashboard() {
                 className={`rounded-xl border p-4 transition shadow-lg ${
                   evaluation.is_compliant
                     ? "border-emerald-500/40 bg-gradient-to-b from-emerald-500/15 to-emerald-950/30 text-emerald-300 shadow-emerald-500/5"
-                    : "border-red-500/40 bg-gradient-to-b from-red-500/15 to-red-950/30 text-red-300 shadow-red-500/5"
+                    : evaluation.overall_status === "REJECTED"
+                      ? "border-red-500/40 bg-gradient-to-b from-red-500/15 to-red-950/30 text-red-300 shadow-red-500/5"
+                      : "border-amber-500/40 bg-gradient-to-b from-amber-500/15 to-amber-950/30 text-amber-200 shadow-amber-500/5"
                 }`}
               >
                 <div className="flex items-center space-x-3 mb-2.5">
@@ -850,9 +855,13 @@ export default function ElevaiDashboard() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
                       <CheckCircle2 className="h-5 w-5" />
                     </div>
-                  ) : (
+                  ) : evaluation.overall_status === "REJECTED" ? (
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 shrink-0">
                       <ShieldAlert className="h-5 w-5" />
+                    </div>
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                      <AlertTriangle className="h-5 w-5" />
                     </div>
                   )}
                   <div>
@@ -860,9 +869,11 @@ export default function ElevaiDashboard() {
                       Audit Status
                     </div>
                     <div className="text-sm font-bold tracking-wide font-mono">
-                      {evaluation.overall_status === "APPROVED"
-                        ? "APPROVED (EN 81-70 PASS)"
-                        : "REJECTED (CLEARANCE BREACH)"}
+                      {evaluation.overall_status === "GEOMETRY_CHECKS_PASSED"
+                        ? "DIMENSIONAL SCREEN PASSED"
+                        : evaluation.overall_status === "REJECTED"
+                          ? "FIT CHECK FAILED"
+                          : "MORE INFORMATION NEEDED"}
                     </div>
                   </div>
                 </div>
@@ -871,7 +882,9 @@ export default function ElevaiDashboard() {
                   <div>
                     <div className="text-[10px] uppercase text-zinc-400 font-medium">Project Total</div>
                     <div className="text-xl font-black text-zinc-100 font-mono tracking-tight">
-                      ₹{evaluation.total_estimated_cost_inr.toLocaleString("en-IN")}
+                      {evaluation.total_estimated_cost_inr === null
+                        ? "Pending measurements"
+                        : `₹${evaluation.total_estimated_cost_inr.toLocaleString("en-IN")}`}
                     </div>
                   </div>
                   <div className="text-[10px] text-zinc-400 font-mono">
@@ -917,6 +930,19 @@ export default function ElevaiDashboard() {
                 </div>
               )}
 
+              {evaluation.missing_information.length > 0 && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3.5">
+                  <div className="mb-2 flex items-center text-[11px] font-semibold uppercase tracking-wider text-amber-300">
+                    <AlertTriangle className="mr-1.5 h-3.5 w-3.5" /> Needed before a fit decision
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-amber-200/90">
+                    {evaluation.missing_information.map((missing, i) => (
+                      <li key={`${missing}-${i}`}>• {missing}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Explanatory Site Adjustment Warnings List */}
               {evaluation.warnings.length > 0 && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3.5">
@@ -953,19 +979,27 @@ export default function ElevaiDashboard() {
                           {item.sku_id}
                         </span>
                         <span className="font-semibold font-mono text-zinc-100">
-                          ₹{item.extended_cost_inr.toLocaleString("en-IN")}
+                          {item.extended_cost_inr === null
+                            ? "Pending fit"
+                            : `₹${item.extended_cost_inr.toLocaleString("en-IN")}`}
                         </span>
                       </div>
                       <div className="text-zinc-300 text-[11px] line-clamp-1 mb-1 font-medium">
                         {item.name}
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-zinc-400 font-mono">
-                        <span>{item.quantity} Qty @ ₹{item.unit_cost_inr.toLocaleString("en-IN")}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                          item.status === "PASS"
-                            ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                            : "text-red-400 bg-red-500/10 border border-red-500/20"
-                        }`}>
+                          <span>
+                            {item.quantity ?? "—"} Qty @ {item.unit_cost_inr === null
+                              ? "price unavailable"
+                              : `₹${item.unit_cost_inr.toLocaleString("en-IN")}`}
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                            item.status === "PASS"
+                              ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                              : item.status === "FAIL"
+                                ? "text-red-400 bg-red-500/10 border border-red-500/20"
+                                : "text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                          }`}>
                           {item.status}
                         </span>
                       </div>
@@ -976,7 +1010,9 @@ export default function ElevaiDashboard() {
                 <div className="border-t border-zinc-800 p-3 bg-zinc-900/80 flex justify-between items-center">
                   <span className="text-xs font-semibold text-zinc-300 uppercase">Estimated Total</span>
                   <span className="text-sm font-bold font-mono text-amber-400">
-                    ₹{evaluation.total_estimated_cost_inr.toLocaleString("en-IN")}
+                    {evaluation.total_estimated_cost_inr === null
+                      ? "Pending measurements"
+                      : `₹${evaluation.total_estimated_cost_inr.toLocaleString("en-IN")}`}
                   </span>
                 </div>
               </div>
