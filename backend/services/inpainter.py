@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 import cv2
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
@@ -38,17 +39,19 @@ class CabinInpainter:
         width: int = 600,
         height: int = 800,
         base_color: Tuple[int, int, int] = (210, 215, 220),
-        tint: Optional[Tuple[int, int, int]] = None
+        tint: Optional[Tuple[int, int, int]] = None,
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """Generates fine vertical brushed stainless steel with directional sheen and panel seams."""
+        rng = rng or np.random.default_rng()
         tex = np.full((height, width, 3), base_color, dtype=np.float32)
 
         # 1. Vertical hairline streaks (1D noise broadcast horizontally)
-        streak_noise = np.random.normal(0, 14.0, (height, 1, 1)).astype(np.float32)
+        streak_noise = rng.normal(0, 14.0, (height, 1, 1)).astype(np.float32)
         tex += streak_noise
 
         # 2. High-frequency 2D micro-scratch grain
-        micro_grain = np.random.normal(0, 5.0, (height, width, 1)).astype(np.float32)
+        micro_grain = rng.normal(0, 5.0, (height, width, 1)).astype(np.float32)
         tex += micro_grain
 
         # 3. Directional metallic sheen (horizontal reflection bands)
@@ -73,7 +76,8 @@ class CabinInpainter:
         self,
         width: int = 600,
         height: int = 800,
-        wood_type: str = "oak"
+        wood_type: str = "oak",
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """Generates architectural natural oak or fluted walnut wood textures."""
         if wood_type == "walnut":
@@ -95,7 +99,7 @@ class CabinInpainter:
             x_indices = np.arange(width).reshape(1, -1)
             grain = np.sin(x_indices * 0.12 + np.sin(y_indices * 0.02) * 4.0) * 18.0
             tex += grain[:, :, np.newaxis]
-            fine_noise = np.random.normal(0, 4.0, (height, width, 1))
+            fine_noise = (rng or np.random.default_rng()).normal(0, 4.0, (height, width, 1))
             tex += fine_noise
 
         return np.clip(tex, 0, 255).astype(np.uint8)
@@ -103,14 +107,15 @@ class CabinInpainter:
     def create_coin_rubber_texture(
         self,
         width: int = 700,
-        height: int = 700
+        height: int = 700,
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """Generates durable charcoal rubber flooring with 3D raised coin-studs."""
         # Dark charcoal matte base
         tex = np.full((height, width, 3), (32, 34, 36), dtype=np.uint8)
 
         # Micro rubber grain
-        grain = np.random.normal(0, 3.5, (height, width, 3)).astype(np.float32)
+        grain = (rng or np.random.default_rng()).normal(0, 3.5, (height, width, 3)).astype(np.float32)
         tex = np.clip(tex.astype(np.float32) + grain, 0, 255).astype(np.uint8)
 
         # Grid of raised coin studs
@@ -134,15 +139,17 @@ class CabinInpainter:
     def create_granite_tile_texture(
         self,
         width: int = 700,
-        height: int = 700
+        height: int = 700,
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """Generates honed black granite tile floor with fine stone flecks and brass transition joints."""
         tex = np.full((height, width, 3), (26, 28, 30), dtype=np.float32)
 
         # Multi-scale crystalline granite noise
-        speckles = np.random.choice([0, 20, 45, 75], size=(height, width, 1), p=[0.72, 0.18, 0.08, 0.02])
+        rng = rng or np.random.default_rng()
+        speckles = rng.choice([0, 20, 45, 75], size=(height, width, 1), p=[0.72, 0.18, 0.08, 0.02])
         tex += speckles
-        tex += np.random.normal(0, 4.0, (height, width, 3))
+        tex += rng.normal(0, 4.0, (height, width, 3))
 
         tex = np.clip(tex, 0, 255).astype(np.uint8)
 
@@ -161,7 +168,8 @@ class CabinInpainter:
         self,
         width: int = 700,
         height: int = 500,
-        style: str = "perimeter_led"
+        style: str = "perimeter_led",
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """Generates perimeter indirect LED cove canopy or diffused acrylic light ceiling."""
         if style == "acrylic":
@@ -199,7 +207,7 @@ class CabinInpainter:
         plate_w = width - (trough_margin * 2)
         plate_h = height - (trough_margin * 2)
         if plate_w > 10 and plate_h > 10:
-            plate = self.create_brushed_metal_texture(plate_w, plate_h, base_color=(190, 195, 200))
+            plate = self.create_brushed_metal_texture(plate_w, plate_h, base_color=(190, 195, 200), rng=rng)
             # Plate shadow reveal
             cv2.rectangle(
                 led_glow,
@@ -217,7 +225,8 @@ class CabinInpainter:
         self,
         width: int = 140,
         height: int = 380,
-        sku_id: str = "COP-COL-TFT"
+        sku_id: str = "COP-COL-TFT",
+        rng: Optional[np.random.Generator] = None,
     ) -> np.ndarray:
         """
         Synthesizes a modern architectural COP column featuring:
@@ -228,7 +237,7 @@ class CabinInpainter:
         # Column body
         cop = np.full((height, width, 3), (205, 210, 215), dtype=np.float32)
         # Vertical column brush grain
-        brush = np.random.normal(0, 8.0, (height, 1, 1)).astype(np.float32)
+        brush = (rng or np.random.default_rng()).normal(0, 8.0, (height, 1, 1)).astype(np.float32)
         cop += brush
         # Side bevels
         cop[:, 0:4] = [70, 75, 80]
@@ -361,7 +370,7 @@ class CabinInpainter:
         scene_dir: str,
         img_w: int,
         img_h: int
-    ) -> Dict[str, np.ndarray]:
+    ) -> Tuple[Dict[str, np.ndarray], str]:
         """
         Locates cabin surfaces (back_wall, left_wall, right_wall, floor, ceiling, cop)
         using gold annotations or calibrated scene geometry.
@@ -373,10 +382,12 @@ class CabinInpainter:
         cop_box = None
         ceiling_box = None
         floor_box = None
+        geometry_source = "generic_fallback_estimate"
 
         if os.path.exists(gold_path):
             with open(gold_path, "r", encoding="utf-8") as f:
                 gold_data = json.load(f)
+            geometry_source = f"{gold_data.get('review_status', 'unverified')}_annotations"
             for ann in gold_data.get("annotations", []):
                 lbl = ann.get("label") or ann.get("category_id")
                 ymin, xmin, ymax, xmax = ann.get("bbox_normalized", [0, 0, 0, 0])
@@ -401,6 +412,8 @@ class CabinInpainter:
                     back_wall_box = box
                 elif cat == "cop" and cop_box is None:
                     cop_box = box
+            if back_wall_box is not None and cop_box is not None:
+                geometry_source = "detector_bounding_boxes"
 
         # Sensible geometric fallbacks if boxes not detected
         if back_wall_box is None:
@@ -451,7 +464,9 @@ class CabinInpainter:
             ])
         }
 
-        return polygons
+        if back_wall_box is None or cop_box is None:
+            geometry_source = "generic_fallback_estimate"
+        return polygons, geometry_source
 
     # -------------------------------------------------------------------------
     # Core Rendering Engine
@@ -475,6 +490,8 @@ class CabinInpainter:
             raise FileNotFoundError(f"No cabin image found in {scene_dir}")
 
         base_img = cv2.imread(cabin_img_path)
+        if base_img is None:
+            raise ValueError(f"Could not read cabin image: {cabin_img_path}")
         img_h, img_w, _ = base_img.shape
 
         # Extract ambient lighting (luminance map) for photorealistic shading preservation
@@ -483,17 +500,29 @@ class CabinInpainter:
         ambient_mult = np.clip(l_channel / 128.0, 0.35, 1.45)[:, :, np.newaxis]
 
         # Extract perspective polygons
-        polygons = self.extract_cabin_polygons(scene_dir, img_w, img_h)
+        polygons, geometry_source = self.extract_cabin_polygons(scene_dir, img_w, img_h)
 
         result_img = base_img.copy()
 
         # Categorize active SKUs
         selected_items = {}
+        unknown_skus = []
         for sku in selected_skus:
             if sku in self.catalog:
                 item = self.catalog[sku]
                 cat = item.get("category", "unknown")
+                if cat in selected_items:
+                    raise ValueError(f"Only one SKU per category can be rendered; duplicate category '{cat}'.")
                 selected_items[cat] = item
+            else:
+                unknown_skus.append(sku)
+        if unknown_skus:
+            raise ValueError(f"Unknown catalog SKU(s): {', '.join(unknown_skus)}")
+
+        seed_material = f"{os.path.basename(scene_dir)}:{'|'.join(sorted(selected_skus))}"
+        seed = int(hashlib.sha256(seed_material.encode("utf-8")).hexdigest()[:8], 16)
+        rng = np.random.default_rng(seed)
+        change_mask = np.zeros((img_h, img_w), dtype=np.uint8)
 
         rendered_components = []
 
@@ -505,17 +534,17 @@ class CabinInpainter:
 
             if "wood" in mat or "timber" in mat or "laminate" in mat:
                 wood_type = "walnut" if "walnut" in sku.lower() else "oak"
-                wall_tex = self.create_wood_texture(600, 800, wood_type=wood_type)
+                wall_tex = self.create_wood_texture(600, 800, wood_type=wood_type, rng=rng)
             elif "bronze" in mat or "brz" in sku.lower():
-                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(120, 150, 190), tint=(140, 170, 220))
+                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(120, 150, 190), tint=(140, 170, 220), rng=rng)
             elif "black" in sku.lower() or "pvd" in mat:
-                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(40, 42, 45))
+                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(40, 42, 45), rng=rng)
             elif "glass" in mat:
                 wall_tex = np.full((800, 600, 3), (242, 245, 248), dtype=np.uint8)
                 for jx in [200, 400]:
                     cv2.line(wall_tex, (jx, 0), (jx, 800), (190, 195, 200), 2)
             else:
-                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(205, 210, 215))
+                wall_tex = self.create_brushed_metal_texture(600, 800, base_color=(205, 210, 215), rng=rng)
 
             tex_h, tex_w, _ = wall_tex.shape
             src_pts = np.float32([[0, 0], [tex_w, 0], [tex_w, tex_h], [0, tex_h]])
@@ -533,6 +562,7 @@ class CabinInpainter:
                 alpha = 0.82
                 blended = cv2.addWeighted(shaded_warped, alpha, result_img, 1.0 - alpha, 0)
                 result_img[mask > 0] = blended[mask > 0]
+                change_mask[mask > 0] = 255
 
             rendered_components.append("wall_panel")
 
@@ -541,9 +571,9 @@ class CabinInpainter:
         if floor_item:
             sku = floor_item.get("sku_id")
             if "coin" in sku.lower() or "rub" in sku.lower():
-                floor_tex = self.create_coin_rubber_texture(700, 700)
+                floor_tex = self.create_coin_rubber_texture(700, 700, rng=rng)
             else:
-                floor_tex = self.create_granite_tile_texture(700, 700)
+                floor_tex = self.create_granite_tile_texture(700, 700, rng=rng)
 
             tex_h, tex_w, _ = floor_tex.shape
             src_pts = np.float32([[0, 0], [tex_w, 0], [tex_w, tex_h], [0, tex_h]])
@@ -560,6 +590,7 @@ class CabinInpainter:
             alpha = 0.88
             blended_floor = cv2.addWeighted(shaded_floor, alpha, result_img, 1.0 - alpha, 0)
             result_img[floor_mask > 0] = blended_floor[floor_mask > 0]
+            change_mask[floor_mask > 0] = 255
 
             rendered_components.append("flooring")
 
@@ -568,7 +599,7 @@ class CabinInpainter:
         if ceil_item:
             sku = ceil_item.get("sku_id")
             style = "acrylic" if "acrylic" in sku.lower() else "perimeter_led"
-            ceil_tex = self.create_perimeter_ceiling_texture(700, 500, style=style)
+            ceil_tex = self.create_perimeter_ceiling_texture(700, 500, style=style, rng=rng)
 
             tex_h, tex_w, _ = ceil_tex.shape
             src_pts = np.float32([[0, 0], [tex_w, 0], [tex_w, tex_h], [0, tex_h]])
@@ -583,6 +614,7 @@ class CabinInpainter:
             alpha = 0.90
             blended_ceil = cv2.addWeighted(warped_ceil, alpha, result_img, 1.0 - alpha, 0)
             result_img[ceil_mask > 0] = blended_ceil[ceil_mask > 0]
+            change_mask[ceil_mask > 0] = 255
 
             rendered_components.append("ceiling_lighting")
 
@@ -590,7 +622,7 @@ class CabinInpainter:
         cop_item = selected_items.get("car_operating_panel")
         if cop_item:
             sku = cop_item.get("sku_id")
-            cop_tex = self.create_cop_overlay(140, 420, sku_id=sku)
+            cop_tex = self.create_cop_overlay(140, 420, sku_id=sku, rng=rng)
 
             tex_h, tex_w, _ = cop_tex.shape
             src_pts = np.float32([[0, 0], [tex_w, 0], [tex_w, tex_h], [0, tex_h]])
@@ -607,12 +639,17 @@ class CabinInpainter:
             alpha = 0.92
             blended_cop = cv2.addWeighted(shaded_cop, alpha, result_img, 1.0 - alpha, 0)
             result_img[cop_mask > 0] = blended_cop[cop_mask > 0]
+            change_mask[cop_mask > 0] = 255
 
             rendered_components.append("car_operating_panel")
 
         # Save output image
         output_path = os.path.join(scene_dir, output_filename)
         cv2.imwrite(output_path, result_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        mask_filename = os.path.splitext(output_filename)[0] + "_change_mask.png"
+        change_mask_path = os.path.join(scene_dir, mask_filename)
+        cv2.imwrite(change_mask_path, change_mask)
+        not_rendered = sorted(set(selected_items) - {"wall_panel", "flooring", "ceiling_lighting", "car_operating_panel"})
 
         return {
             "status": "success",
@@ -620,5 +657,11 @@ class CabinInpainter:
             "output_path": output_path,
             "output_filename": output_filename,
             "rendered_components": rendered_components,
-            "selected_skus": selected_skus
+            "selected_skus": selected_skus,
+            "change_mask_filename": mask_filename,
+            "changed_pixel_fraction": round(float(np.count_nonzero(change_mask)) / (img_h * img_w), 4),
+            "geometry_source": geometry_source,
+            "review_required": geometry_source != "verified_annotations" or bool(not_rendered),
+            "not_rendered_categories": not_rendered,
+            "visual_disclaimer": "Procedural material concept only. Surface masks may approximate geometry; verify all changes against site measurements and the actual product."
         }

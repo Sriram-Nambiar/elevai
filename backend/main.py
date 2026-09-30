@@ -226,9 +226,17 @@ def render_preview(payload: PreviewRenderRequest):
             "status": "success",
             "scene_id": payload.scene_id,
             "preview_url": preview_url,
+            "change_mask_url": f"/static/scenes/{payload.scene_id}/{render_result['change_mask_filename']}",
             "rendered_components": render_result.get("rendered_components", []),
-            "selected_skus": payload.selected_skus
+            "selected_skus": payload.selected_skus,
+            "changed_pixel_fraction": render_result.get("changed_pixel_fraction"),
+            "geometry_source": render_result.get("geometry_source"),
+            "review_required": render_result.get("review_required", True),
+            "not_rendered_categories": render_result.get("not_rendered_categories", []),
+            "visual_disclaimer": render_result.get("visual_disclaimer"),
         }
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preview rendering failure: {str(e)}")
 

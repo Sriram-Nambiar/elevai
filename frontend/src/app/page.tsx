@@ -121,6 +121,10 @@ export default function ElevaiDashboard() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string>(
     `${API_BASE}/static/scenes/scene_01_passenger/after_preview.jpg`
   );
+  const [changeMaskUrl, setChangeMaskUrl] = useState<string>(
+    `${API_BASE}/static/scenes/scene_01_passenger/after_preview_change_mask.png`
+  );
+  const [showChangeMask, setShowChangeMask] = useState(false);
   const [cabinDims, setCabinDims] = useState<{ width: number | null; depth: number | null; height: number | null }>({ width: 1200, depth: 1400, height: 2350 });
   const [maxFlooringThickness, setMaxFlooringThickness] = useState<number | null>(12);
   const [copMountHeight, setCopMountHeight] = useState<number | null>(1000);
@@ -203,6 +207,9 @@ export default function ElevaiDashboard() {
       // Bust browser cache to display fresh composite
       const freshUrl = `${API_BASE}/static/scenes/${sceneId}/after_preview.jpg?t=${Date.now()}`;
       setPreviewImageUrl(freshUrl);
+      if (data.change_mask_url) {
+        setChangeMaskUrl(`${API_BASE}${data.change_mask_url}?t=${Date.now()}`);
+      }
     } catch (err: any) {
       console.error("Preview rendering failed:", err);
     } finally {
@@ -537,6 +544,14 @@ export default function ElevaiDashboard() {
                 <Sparkles className="h-3 w-3 text-amber-400" />
                 <span>Modernized</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setShowChangeMask((visible) => !visible)}
+                disabled={viewMode !== "modernized"}
+                className="rounded-md px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+              >
+                {showChangeMask ? "Hide changed areas" : "Show changed areas"}
+              </button>
             </div>
           </div>
 
@@ -618,6 +633,13 @@ export default function ElevaiDashboard() {
                     alt={viewMode === "modernized" ? "Modernized Inpainted Preview" : "Raw Cabin Scan"}
                     className="h-full w-full object-cover transition-opacity duration-300"
                   />
+                  {viewMode === "modernized" && showChangeMask && (
+                    <img
+                      src={changeMaskUrl}
+                      alt="Mask showing regions changed by the procedural preview"
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-screen"
+                    />
+                  )}
 
                   {/* Interactive SVG Segmentation Overlays when in Existing inspection view */}
                   {viewMode === "existing" && (
