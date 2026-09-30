@@ -9,6 +9,8 @@ export interface Segment {
   color: string;
   polygon: [number, number][];
   confidence: number;
+  review_required?: boolean;
+  geometry_source?: string;
 }
 
 interface SegmentOverlayProps {
@@ -51,10 +53,14 @@ export default function SegmentOverlay({
               fillOpacity={isHovered ? 0.50 : 0.25}
               stroke={seg.color}
               strokeWidth={isHovered ? 1.5 : 0.8}
-              strokeDasharray={isHovered ? "none" : "2,2"}
+              strokeDasharray={seg.review_required ? "4,2" : isHovered ? "none" : "2,2"}
               onMouseEnter={() => onHoverSegment(seg.id)}
               onMouseLeave={() => onHoverSegment(null)}
-            />
+            >
+              <title>
+                {seg.label} · {Math.round(seg.confidence * 100)}% detector confidence · approximate box; human review required
+              </title>
+            </polygon>
           </g>
         );
       })}

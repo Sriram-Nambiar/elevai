@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -61,6 +61,15 @@ interface EvaluationResponse {
   total_estimated_cost_inr: number | null;
 }
 
+interface Recommendation {
+  profile: string;
+  label: string;
+  selected_skus: string[];
+  estimated_cost_inr: number;
+  reasons: string[];
+  review_required: boolean;
+}
+
 const CATEGORY_ORDER = [
   "wall_panel",
   "flooring",
@@ -112,11 +121,29 @@ export default function ElevaiDashboard() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string>(
     `${API_BASE}/static/scenes/scene_01_passenger/after_preview.jpg`
   );
-  const [cabinDims, setCabinDims] = useState({ width: 1200, depth: 1400, height: 2350 });
-  const [maxFlooringThickness, setMaxFlooringThickness] = useState<number>(12);
+  const [cabinDims, setCabinDims] = useState<{ width: number | null; depth: number | null; height: number | null }>({ width: 1200, depth: 1400, height: 2350 });
+  const [maxFlooringThickness, setMaxFlooringThickness] = useState<number | null>(12);
+  const [copMountHeight, setCopMountHeight] = useState<number | null>(1000);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommending, setRecommending] = useState(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const measurementsComplete = [
+    cabinDims.width,
+    cabinDims.depth,
+    cabinDims.height,
+    maxFlooringThickness,
+    copMountHeight,
+  ].every((value) => value !== null && Number.isFinite(value) && value > 0);
+
+  const siteMeasurements = useMemo(() => ({
+    scene_id: activeScene,
+    cabin_dimensions_mm: cabinDims,
+    max_allowable_flooring_thickness_mm: maxFlooringThickness,
+    existing_cop: { mounting_height_from_floor_mm: copMountHeight },
+  }), [activeScene, cabinDims, maxFlooringThickness, copMountHeight]);
 
   // Category visibility and segmentation state
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({
@@ -196,14 +223,7 @@ export default function ElevaiDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           selected_skus: activeList,
-          site_measurements: {
-            scene_id: activeScene,
-            cabin_dimensions_mm: cabinDims,
-            max_allowable_flooring_thickness_mm: maxFlooringThickness,
-            existing_cop: {
-              mounting_height_from_floor_mm: 1000
-            }
-          }
+          site_measurements: siteMeasurements
         }),
       });
 
@@ -215,10 +235,43 @@ export default function ElevaiDashboard() {
     } finally {
       setEvaluating(false);
     }
-  }, [activeScene, cabinDims, maxFlooringThickness]);
+  }, [siteMeasurements]);
+
+  const fetchRecommendations = useCallback(async () => {
+    setRecommending(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/recommendations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ site_measurements: siteMeasurements }),
+      });
+      if (!response.ok) throw new Error(`Recommendation request failed: ${response.statusText}`);
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+    } catch (err: any) {
+      setRecommendations([]);
+      setError(err.message || "Could not prepare configuration options");
+    } finally {
+      setRecommending(false);
+    }
+  }, [siteMeasurements]);
+
+  const initialLoadActions = useRef({
+    runEvaluation,
+    fetchRecommendations,
+    triggerRender,
+    fetchSegmentation,
+  });
+  initialLoadActions.current = {
+    runEvaluation,
+    fetchRecommendations,
+    triggerRender,
+    fetchSegmentation,
+  };
 
   // Initial load
   useEffect(() => {
+    const actions = initialLoadActions.current;
     async function initDashboard() {
       try {
         setLoading(true);
@@ -247,9 +300,10 @@ export default function ElevaiDashboard() {
         setSelectedSkus(initialSelections);
 
         // Run evaluation, initial render, and fetch segmentation in parallel
-        await runEvaluation(initialSelections);
-        await triggerRender("scene_01_passenger", initialSelections);
-        await fetchSegmentation("scene_01_passenger");
+        await actions.runEvaluation(initialSelections);
+        await actions.fetchRecommendations();
+        await actions.triggerRender("scene_01_passenger", initialSelections);
+        await actions.fetchSegmentation("scene_01_passenger");
       } catch (err: any) {
         setError(err.message || "Failed to initialize Elevai Studio");
       } finally {
@@ -258,14 +312,26 @@ export default function ElevaiDashboard() {
     }
 
     initDashboard();
-  }, [runEvaluation, triggerRender, fetchSegmentation]);
+  }, []);
 
   // Handle SKU toggle
   const handleSelectSku = (category: string, skuId: string) => {
     const updated = { ...selectedSkus, [category]: skuId };
     setSelectedSkus(updated);
     runEvaluation(updated);
+    fetchRecommendations();
     triggerRender(activeScene, updated);
+  };
+
+  const handleApplyRecommendation = (recommendation: Recommendation) => {
+    const nextSelections: Record<string, string> = {};
+    recommendation.selected_skus.forEach((sku) => {
+      const item = catalog.find((candidate) => candidate.sku_id === sku);
+      if (item) nextSelections[item.category] = sku;
+    });
+    setSelectedSkus(nextSelections);
+    runEvaluation(nextSelections);
+    triggerRender(activeScene, nextSelections);
   };
 
   // Export PDF Quotation & Engineering Spec Sheet
@@ -336,16 +402,13 @@ export default function ElevaiDashboard() {
         ? data.image_url
         : `${API_BASE}${data.image_url}`;
       setRawImageUrl(`${uploadedImageUrl}?t=${Date.now()}`);
+      setCabinDims({ width: null, depth: null, height: null });
+      setMaxFlooringThickness(null);
+      setCopMountHeight(null);
+      setEvaluation(null);
+      setRecommendations([]);
 
-      if (data.cabin_dimensions_mm) {
-        setCabinDims(data.cabin_dimensions_mm);
-      }
-      if (data.max_allowable_flooring_thickness_mm) {
-        setMaxFlooringThickness(data.max_allowable_flooring_thickness_mm);
-      }
-
-      // Re-evaluate, generate inpainting render, and fetch segmentation for new photo
-      await runEvaluation(selectedSkus);
+      // Preview and recognition remain available; fit decisions wait for site measurements.
       await triggerRender(data.scene_id, selectedSkus);
       await fetchSegmentation(data.scene_id);
       setViewMode("modernized");
@@ -419,17 +482,17 @@ export default function ElevaiDashboard() {
           <div className="flex items-center space-x-3 text-xs">
             <div className="hidden sm:flex items-center space-x-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 font-mono text-[11px] text-zinc-300">
               <span className="text-zinc-500">CABIN:</span>
-              <span className="text-amber-400 font-semibold">{cabinDims.width}</span>
+              <span className="text-amber-400 font-semibold">{cabinDims.width ?? "?"}</span>
               <span className="text-zinc-500">×</span>
-              <span className="text-amber-400 font-semibold">{cabinDims.depth}</span>
+              <span className="text-amber-400 font-semibold">{cabinDims.depth ?? "?"}</span>
               <span className="text-zinc-500">×</span>
-              <span className="text-amber-400 font-semibold">{cabinDims.height}</span>
+              <span className="text-amber-400 font-semibold">{cabinDims.height ?? "?"}</span>
               <span className="text-zinc-500">mm</span>
             </div>
 
             <div className="flex items-center space-x-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-400 text-[11px] font-medium">
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Rules Engine Live</span>
+              <span>Prototype fit rules</span>
             </div>
           </div>
         </div>
@@ -611,7 +674,7 @@ export default function ElevaiDashboard() {
                       {viewMode === "modernized" ? (
                         <>
                           <Sparkles className="h-2.5 w-2.5 text-amber-400" />
-                          <span>AI Modernized Preview</span>
+                        <span>Procedural concept preview</span>
                         </>
                       ) : (
                         <>
@@ -626,18 +689,18 @@ export default function ElevaiDashboard() {
                   <div className="absolute inset-0 p-2.5 pointer-events-none flex flex-col justify-between">
                     <div className="flex justify-between items-start mt-7">
                       <span className="rounded bg-black/75 px-2 py-0.5 text-[10px] font-mono text-purple-300 border border-purple-500/30 backdrop-blur-xs">
-                        Ceiling: {cabinDims.width}×{cabinDims.depth}mm
+                        Ceiling: {cabinDims.width ?? "?"}×{cabinDims.depth ?? "?"}mm
                       </span>
                       <span className="rounded bg-black/75 px-2 py-0.5 text-[10px] font-mono text-emerald-300 border border-emerald-500/30 backdrop-blur-xs">
-                        EN 81-70 Reach ≤1200mm
+                        Control height: {copMountHeight ?? "?"}mm
                       </span>
                     </div>
                     <div className="flex justify-between items-end">
                       <span className="rounded bg-black/75 px-2 py-0.5 text-[10px] font-mono text-blue-300 border border-blue-500/30 backdrop-blur-xs">
-                        Wall H: {cabinDims.height}mm
+                        Wall H: {cabinDims.height ?? "?"}mm
                       </span>
                       <span className="rounded bg-black/75 px-2 py-0.5 text-[10px] font-mono text-amber-300 border border-amber-500/30 backdrop-blur-xs">
-                        Sill Allowance ≤{maxFlooringThickness}mm
+                        Sill ≤{maxFlooringThickness ?? "?"}mm
                       </span>
                     </div>
                   </div>
@@ -656,20 +719,43 @@ export default function ElevaiDashboard() {
               </span>
             </div>
 
-            {/* Dimension Breakdown Metrics */}
-            <div className="mt-2.5 grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="rounded-lg bg-zinc-900/80 p-2 border border-zinc-800/80">
-                <div className="text-[10px] uppercase text-zinc-500 font-mono">Width</div>
-                <div className="font-semibold text-zinc-200 font-mono">{cabinDims.width} mm</div>
+            <div className="mt-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-400">
+                Site measurements · millimetres · enter measured values
               </div>
-              <div className="rounded-lg bg-zinc-900/80 p-2 border border-zinc-800/80">
-                <div className="text-[10px] uppercase text-zinc-500 font-mono">Depth</div>
-                <div className="font-semibold text-zinc-200 font-mono">{cabinDims.depth} mm</div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {([
+                  ["Cabin width", cabinDims.width, (value: number | null) => setCabinDims((current) => ({ ...current, width: value }))],
+                  ["Cabin depth", cabinDims.depth, (value: number | null) => setCabinDims((current) => ({ ...current, depth: value }))],
+                  ["Cabin height", cabinDims.height, (value: number | null) => setCabinDims((current) => ({ ...current, height: value }))],
+                  ["Sill allowance", maxFlooringThickness, setMaxFlooringThickness],
+                  ["COP mount height", copMountHeight, setCopMountHeight],
+                ] as [string, number | null, (value: number | null) => void][]).map(([label, value, setter]) => (
+                  <label key={label} className="space-y-1 text-zinc-400">
+                    <span>{label}</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={value ?? ""}
+                      onChange={(event) => setter(event.target.value === "" ? null : Number(event.target.value))}
+                      placeholder="Required"
+                      className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-zinc-100 outline-none focus:border-amber-500"
+                    />
+                  </label>
+                ))}
               </div>
-              <div className="rounded-lg bg-zinc-900/80 p-2 border border-zinc-800/80">
-                <div className="text-[10px] uppercase text-zinc-500 font-mono">Height</div>
-                <div className="font-semibold text-zinc-200 font-mono">{cabinDims.height} mm</div>
-              </div>
+              <button
+                onClick={() => { runEvaluation(selectedSkus); fetchRecommendations(); }}
+                disabled={!measurementsComplete || evaluating || recommending}
+                className="mt-2 w-full rounded-lg bg-amber-500/15 px-3 py-2 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {recommending ? "Checking catalog options…" : "Check measurements & compare options"}
+              </button>
+              {!measurementsComplete && (
+                <p className="mt-2 text-[10px] text-amber-300/80">
+                  Fit checks and recommendations stay on hold until all five site measurements are entered.
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -703,6 +789,41 @@ export default function ElevaiDashboard() {
             <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-300 flex items-start space-x-2">
               <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
               <div>{error}</div>
+            </div>
+          )}
+
+          {recommendations.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-950/10 p-3">
+              <div>
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">Compare checked configurations</h3>
+                <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">
+                  Both options passed the prototype dimensional screen. Catalog cues are suggestions; a lift professional must verify the final design.
+                </p>
+              </div>
+              {recommendations.map((recommendation) => (
+                <div key={recommendation.profile} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-zinc-100">{recommendation.label}</div>
+                      <div className="mt-1 text-[11px] font-mono text-amber-300">
+                        ₹{recommendation.estimated_cost_inr.toLocaleString("en-IN")} · estimate
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleApplyRecommendation(recommendation)}
+                      className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/20"
+                    >Apply</button>
+                  </div>
+                  <ul className="mt-2 space-y-1 text-[10px] text-zinc-400">
+                    {recommendation.reasons.map((reason, index) => <li key={index}>• {reason}</li>)}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {recommendation.selected_skus.map((sku) => (
+                      <span key={sku} className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-300">{sku}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -830,7 +951,7 @@ export default function ElevaiDashboard() {
             </div>
             <button
               onClick={handleExportPdf}
-              disabled={exportingPdf}
+              disabled={exportingPdf || !measurementsComplete}
               className="inline-flex items-center space-x-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 transition cursor-pointer disabled:opacity-50"
             >
               <Download className="h-3 w-3" />
@@ -895,7 +1016,7 @@ export default function ElevaiDashboard() {
                 {/* Styled CTA button right below the total project estimate */}
                 <button
                   onClick={handleDownloadQuote}
-                  disabled={exportingPdf}
+                  disabled={exportingPdf || !measurementsComplete}
                   className="w-full mt-3 flex items-center justify-center space-x-2 rounded-lg border border-amber-500/50 bg-amber-500/20 hover:bg-amber-500/30 px-3.5 py-2.5 text-xs font-semibold text-amber-200 transition shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   {exportingPdf ? (
@@ -1020,7 +1141,7 @@ export default function ElevaiDashboard() {
               {/* Direct PDF Quotation & Engineering Spec Sheet Download Trigger */}
               <button
                 onClick={handleDownloadQuote}
-                disabled={exportingPdf}
+                disabled={exportingPdf || !measurementsComplete}
                 className="w-full flex items-center justify-center space-x-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 px-4 py-3 text-xs font-semibold text-amber-300 transition shadow-lg shadow-amber-500/5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {exportingPdf ? (
