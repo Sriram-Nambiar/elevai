@@ -86,7 +86,7 @@ const LAYER_CHIPS: { key: string; label: string; color: string }[] = [
   { key: "car_operating_panel", label: "COP", color: "#10b981" },
 ];
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export default function ElevaiDashboard() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -329,7 +329,10 @@ export default function ElevaiDashboard() {
       const data = await res.json();
 
       setActiveScene(data.scene_id);
-      setRawImageUrl(`${data.image_url}?t=${Date.now()}`);
+      const uploadedImageUrl = data.image_url.startsWith("http")
+        ? data.image_url
+        : `${API_BASE}${data.image_url}`;
+      setRawImageUrl(`${uploadedImageUrl}?t=${Date.now()}`);
 
       if (data.cabin_dimensions_mm) {
         setCabinDims(data.cabin_dimensions_mm);

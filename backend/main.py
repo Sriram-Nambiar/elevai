@@ -1,7 +1,8 @@
 import os
-import shutil
 import json
 import sys
+import uuid
+from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -9,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from PIL import Image, UnidentifiedImageError
 
 # Ensure backend directory is in sys.path for internal service imports
 backend_dir = Path(__file__).resolve().parent
@@ -150,50 +152,51 @@ def evaluate_configuration(payload: EvaluateRequest):
 
 @app.post("/api/v1/scene/upload")
 async def upload_cabin_scene(file: UploadFile = File(...)):
-    if not file.content_type.startswith("image/"):
+    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(status_code=400, detail="Uploaded file must be an image (JPEG/PNG).")
 
-    upload_scene_dir = BASE_DIR / "data" / "scenes" / "custom_upload"
+    contents = await file.read(12 * 1024 * 1024 + 1)
+    if len(contents) > 12 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image must be 12 MB or smaller.")
+
+    try:
+        with Image.open(BytesIO(contents)) as uploaded_image:
+            if uploaded_image.format not in {"JPEG", "PNG", "WEBP"}:
+                raise HTTPException(status_code=400, detail="Unsupported image encoding.")
+            uploaded_image.verify()
+        with Image.open(BytesIO(contents)) as uploaded_image:
+            normalized_image = uploaded_image.convert("RGB")
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=400, detail="The uploaded file is not a readable image.")
+
+    scene_id = f"upload_{uuid.uuid4().hex[:12]}"
+    upload_scene_dir = BASE_DIR / "data" / "scenes" / scene_id
     upload_scene_dir.mkdir(parents=True, exist_ok=True)
 
     image_path = upload_scene_dir / "cabin_view.jpg"
-    with open(image_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    normalized_image.save(image_path, format="JPEG", quality=95)
 
-    # Maintain raw.jpg as identical copy for compatibility
-    raw_path = upload_scene_dir / "raw.jpg"
-    shutil.copyfile(image_path, raw_path)
-
-    # Initialize baseline calibration and measurements
+    # Measurements are intentionally collected separately from the photograph.
     measurements_file = upload_scene_dir / "site_measurements.json"
-    default_measurements = {
-        "scene_id": "custom_upload",
-        "lift_type": "passenger",
-        "building_type": "commercial",
-        "cabin_dimensions_mm": {
-            "width": 1200,
-            "depth": 1400,
-            "height": 2350
-        },
-        "max_allowable_flooring_thickness_mm": 12,
-        "existing_cop": {
-            "mounting_height_from_floor_mm": 1000,
-            "panel_width_mm": 180,
-            "panel_height_mm": 800
-        },
-        "door_opening_width_mm": 800
+    measurements = {
+        "scene_id": scene_id,
+        "measurement_status": "missing",
+        "unknowns": [
+            "cabin_dimensions_mm",
+            "max_allowable_flooring_thickness_mm",
+            "existing_cop.mounting_height_from_floor_mm"
+        ]
     }
     with open(measurements_file, "w", encoding="utf-8") as f:
-        json.dump(default_measurements, f, indent=2)
+        json.dump(measurements, f, indent=2)
 
     return {
         "status": "success",
-        "scene_id": "custom_upload",
-        "image_url": "http://127.0.0.1:8000/static/scenes/custom_upload/cabin_view.jpg",
+        "scene_id": scene_id,
+        "image_url": f"/static/scenes/{scene_id}/cabin_view.jpg",
         "filename": file.filename,
-        "cabin_dimensions_mm": default_measurements["cabin_dimensions_mm"],
-        "max_allowable_flooring_thickness_mm": default_measurements["max_allowable_flooring_thickness_mm"],
-        "existing_cop": default_measurements["existing_cop"]
+        "measurement_status": "missing",
+        "unknowns": measurements["unknowns"]
     }
 
 @app.post("/api/v1/preview/render")
