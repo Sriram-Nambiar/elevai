@@ -1,0 +1,15 @@
+{
+  "scene_id": "scene_03_panoramic",
+  "cabin_dimensions_mm": {
+    "width": 1600,
+    "depth": 1600,
+    "height": 2600
+  },
+  "max_allowable_flooring_thickness_mm": 15,
+  "existing_cop": {
+    "mounting_height_from_floor_mm": 1050
+  },
+  "door_opening_width_mm": 900,
+  "standard_profile": "ASME A17.1 & Luxury Hospitality",
+  "notes": "High-ceiling commercial hotel cabin featuring warm bronze PVD cladding and architectural stone."
+}
