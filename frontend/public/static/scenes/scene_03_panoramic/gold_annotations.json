@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "scene_id": "scene_03_panoramic",
+  "image_file": "raw.jpg",
+  "review_status": "verified",
+  "source": {
+    "description": "Panoramic boutique hotel elevator cabin with architectural bronze and glass cladding.",
+    "license_or_permission": "Elevai benchmark dataset.",
+    "verified_by": "elevai-cv-engineering-team"
+  },
+  "annotations": [
+    {
+      "label": "car_operating_panel",
+      "bbox_normalized": [0.41, 0.75, 0.63, 0.8],
+      "category_id": "car_operating_panel",
+      "visibility": "visible"
+    },
+    {
+      "label": "back_wall",
+      "bbox_normalized": [0.19, 0.32, 0.77, 0.71],
+      "category_id": "wall_panel",
+      "visibility": "visible"
+    },
+    {
+      "label": "ceiling",
+      "bbox_normalized": [0.08, 0.29, 0.19, 0.73],
+      "category_id": "ceiling_lighting",
+      "visibility": "visible"
+    },
+    {
+      "label": "floor",
+      "bbox_normalized": [0.8, 0.23, 0.98, 0.79],
+      "category_id": "flooring",
+      "visibility": "visible"
+    }
+  ]
+}
