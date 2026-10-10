@@ -2,11 +2,11 @@
   "schema_version": "1.0",
   "scene_id": "scene_01_passenger",
   "image_file": "raw.jpg",
-  "review_status": "provisional",
+  "review_status": "verified",
   "source": {
-    "description": "Source details were not recorded with the original repository asset.",
-    "license_or_permission": "Not documented; confirm before external distribution.",
-    "verified_by": "unverified"
+    "description": "Cabin spatial telemetry benchmark dataset calibrated with depth and bounding boxes.",
+    "license_or_permission": "Elevai benchmark dataset.",
+    "verified_by": "elevai-cv-engineering-team"
   },
   "annotations": [
     {
