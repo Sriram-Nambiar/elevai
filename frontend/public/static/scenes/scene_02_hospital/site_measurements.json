@@ -1,0 +1,15 @@
+{
+  "scene_id": "scene_02_hospital",
+  "cabin_dimensions_mm": {
+    "width": 1400,
+    "depth": 2400,
+    "height": 2400
+  },
+  "max_allowable_flooring_thickness_mm": 10,
+  "existing_cop": {
+    "mounting_height_from_floor_mm": 1000
+  },
+  "door_opening_width_mm": 1100,
+  "standard_profile": "EN 81-70 Section 5.3 (Type 3 Lift)",
+  "notes": "High-capacity medical stretcher cabin with stainless bumper rails and heavy-duty hygienic surfaces."
+}
