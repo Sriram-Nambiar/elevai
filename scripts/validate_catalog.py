@@ -29,7 +29,7 @@ def run_validation():
     validated_scenes = 0
     for scene_name in sorted(os.listdir(scenes_dir)):
         scene_dir = os.path.join(scenes_dir, scene_name)
-        if not os.path.isdir(scene_dir):
+        if not os.path.isdir(scene_dir) or scene_name == "scene_template":
             continue
 
         gold_path = os.path.join(scene_dir, "gold_annotations.json")
