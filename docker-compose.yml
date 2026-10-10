@@ -8,9 +8,14 @@ services:
     container_name: elevai-backend
     ports:
       - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app/backend
     volumes:
       - ./backend:/app/backend
       - ./data:/app/data
+    restart: unless-stopped
 
   frontend:
     build:
@@ -25,5 +30,7 @@ services:
       - /app/.next
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=development
     depends_on:
       - backend
+    restart: unless-stopped
