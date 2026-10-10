@@ -1,0 +1,310 @@
+{
+  "components": [
+    {
+      "component_id": "wall_panel_0",
+      "category": "wall_panel",
+      "confidence": 0.368,
+      "bbox_pixel": [
+        208,
+        303,
+        316,
+        317
+      ],
+      "bbox_normalized": [
+        0.4152,
+        0.7594,
+        0.6307,
+        0.7945
+      ],
+      "mask_file": "mask_wall_panel_0.png"
+    },
+    {
+      "component_id": "ceiling_1",
+      "category": "ceiling",
+      "confidence": 0.338,
+      "bbox_pixel": [
+        47,
+        119,
+        90,
+        297
+      ],
+      "bbox_normalized": [
+        0.0938,
+        0.2982,
+        0.1796,
+        0.7444
+      ],
+      "mask_file": "mask_ceiling_1.png"
+    },
+    {
+      "component_id": "floor_2",
+      "category": "floor",
+      "confidence": 0.298,
+      "bbox_pixel": [
+        20,
+        73,
+        497,
+        339
+      ],
+      "bbox_normalized": [
+        0.0399,
+        0.183,
+        0.992,
+        0.8496
+      ],
+      "mask_file": "mask_floor_2.png"
+    },
+    {
+      "component_id": "wall_panel_3",
+      "category": "wall_panel",
+      "confidence": 0.281,
+      "bbox_pixel": [
+        48,
+        289,
+        469,
+        328
+      ],
+      "bbox_normalized": [
+        0.0958,
+        0.7243,
+        0.9361,
+        0.8221
+      ],
+      "mask_file": "mask_wall_panel_3.png"
+    },
+    {
+      "component_id": "cop_4",
+      "category": "cop",
+      "confidence": 0.255,
+      "bbox_pixel": [
+        242,
+        33,
+        307,
+        56
+      ],
+      "bbox_normalized": [
+        0.483,
+        0.0827,
+        0.6128,
+        0.1404
+      ],
+      "mask_file": "mask_cop_4.png"
+    },
+    {
+      "component_id": "floor_5",
+      "category": "floor",
+      "confidence": 0.254,
+      "bbox_pixel": [
+        402,
+        90,
+        491,
+        323
+      ],
+      "bbox_normalized": [
+        0.8024,
+        0.2256,
+        0.98,
+        0.8095
+      ],
+      "mask_file": "mask_floor_5.png"
+    },
+    {
+      "component_id": "wall_panel_6",
+      "category": "wall_panel",
+      "confidence": 0.25,
+      "bbox_pixel": [
+        48,
+        86,
+        471,
+        125
+      ],
+      "bbox_normalized": [
+        0.0958,
+        0.2155,
+        0.9401,
+        0.3133
+      ],
+      "mask_file": "mask_wall_panel_6.png"
+    },
+    {
+      "component_id": "wall_panel_7",
+      "category": "wall_panel",
+      "confidence": 0.241,
+      "bbox_pixel": [
+        20,
+        73,
+        497,
+        339
+      ],
+      "bbox_normalized": [
+        0.0399,
+        0.183,
+        0.992,
+        0.8496
+      ],
+      "mask_file": "mask_wall_panel_7.png"
+    },
+    {
+      "component_id": "wall_panel_8",
+      "category": "wall_panel",
+      "confidence": 0.218,
+      "bbox_pixel": [
+        50,
+        89,
+        319,
+        124
+      ],
+      "bbox_normalized": [
+        0.0998,
+        0.2231,
+        0.6367,
+        0.3108
+      ],
+      "mask_file": "mask_wall_panel_8.png"
+    },
+    {
+      "component_id": "wall_panel_9",
+      "category": "wall_panel",
+      "confidence": 0.2,
+      "bbox_pixel": [
+        96,
+        125,
+        397,
+        289
+      ],
+      "bbox_normalized": [
+        0.1916,
+        0.3133,
+        0.7924,
+        0.7243
+      ],
+      "mask_file": "mask_wall_panel_9.png"
+    },
+    {
+      "component_id": "wall_panel_10",
+      "category": "wall_panel",
+      "confidence": 0.2,
+      "bbox_pixel": [
+        104,
+        130,
+        294,
+        283
+      ],
+      "bbox_normalized": [
+        0.2076,
+        0.3258,
+        0.5868,
+        0.7093
+      ],
+      "mask_file": "mask_wall_panel_10.png"
+    },
+    {
+      "component_id": "cop_11",
+      "category": "cop",
+      "confidence": 0.182,
+      "bbox_pixel": [
+        208,
+        303,
+        316,
+        317
+      ],
+      "bbox_normalized": [
+        0.4152,
+        0.7594,
+        0.6307,
+        0.7945
+      ],
+      "mask_file": "mask_cop_11.png"
+    },
+    {
+      "component_id": "wall_panel_12",
+      "category": "wall_panel",
+      "confidence": 0.175,
+      "bbox_pixel": [
+        242,
+        33,
+        307,
+        56
+      ],
+      "bbox_normalized": [
+        0.483,
+        0.0827,
+        0.6128,
+        0.1404
+      ],
+      "mask_file": "mask_wall_panel_12.png"
+    },
+    {
+      "component_id": "wall_panel_13",
+      "category": "wall_panel",
+      "confidence": 0.172,
+      "bbox_pixel": [
+        55,
+        291,
+        318,
+        324
+      ],
+      "bbox_normalized": [
+        0.1098,
+        0.7293,
+        0.6347,
+        0.812
+      ],
+      "mask_file": "mask_wall_panel_13.png"
+    },
+    {
+      "component_id": "cop_14",
+      "category": "cop",
+      "confidence": 0.137,
+      "bbox_pixel": [
+        257,
+        39,
+        291,
+        51
+      ],
+      "bbox_normalized": [
+        0.513,
+        0.0977,
+        0.5808,
+        0.1278
+      ],
+      "mask_file": "mask_cop_14.png"
+    },
+    {
+      "component_id": "wall_panel_15",
+      "category": "wall_panel",
+      "confidence": 0.124,
+      "bbox_pixel": [
+        297,
+        132,
+        379,
+        283
+      ],
+      "bbox_normalized": [
+        0.5928,
+        0.3308,
+        0.7565,
+        0.7093
+      ],
+      "mask_file": "mask_wall_panel_15.png"
+    },
+    {
+      "component_id": "wall_panel_16",
+      "category": "wall_panel",
+      "confidence": 0.121,
+      "bbox_pixel": [
+        4,
+        12,
+        497,
+        378
+      ],
+      "bbox_normalized": [
+        0.008,
+        0.0301,
+        0.992,
+        0.9474
+      ],
+      "mask_file": "mask_wall_panel_16.png"
+    }
+  ]
+}

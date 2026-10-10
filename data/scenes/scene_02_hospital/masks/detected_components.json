@@ -1,0 +1,256 @@
+{
+  "components": [
+    {
+      "component_id": "floor_0",
+      "category": "floor",
+      "confidence": 0.327,
+      "bbox_pixel": [
+        180,
+        31,
+        298,
+        457
+      ],
+      "bbox_normalized": [
+        0.5678,
+        0.0657,
+        0.9401,
+        0.9682
+      ],
+      "mask_file": "mask_floor_0.png"
+    },
+    {
+      "component_id": "wall_panel_1",
+      "category": "wall_panel",
+      "confidence": 0.24,
+      "bbox_pixel": [
+        -1,
+        83,
+        232,
+        141
+      ],
+      "bbox_normalized": [
+        -0.0032,
+        0.1758,
+        0.7319,
+        0.2987
+      ],
+      "mask_file": "mask_wall_panel_1.png"
+    },
+    {
+      "component_id": "wall_panel_2",
+      "category": "wall_panel",
+      "confidence": 0.196,
+      "bbox_pixel": [
+        -1,
+        331,
+        235,
+        379
+      ],
+      "bbox_normalized": [
+        -0.0032,
+        0.7013,
+        0.7413,
+        0.803
+      ],
+      "mask_file": "mask_wall_panel_2.png"
+    },
+    {
+      "component_id": "wall_panel_3",
+      "category": "wall_panel",
+      "confidence": 0.168,
+      "bbox_pixel": [
+        1,
+        0,
+        271,
+        137
+      ],
+      "bbox_normalized": [
+        0.0032,
+        0.0,
+        0.8549,
+        0.2903
+      ],
+      "mask_file": "mask_wall_panel_3.png"
+    },
+    {
+      "component_id": "wall_panel_4",
+      "category": "wall_panel",
+      "confidence": 0.166,
+      "bbox_pixel": [
+        -3,
+        378,
+        264,
+        409
+      ],
+      "bbox_normalized": [
+        -0.0095,
+        0.8008,
+        0.8328,
+        0.8665
+      ],
+      "mask_file": "mask_wall_panel_4.png"
+    },
+    {
+      "component_id": "wall_panel_5",
+      "category": "wall_panel",
+      "confidence": 0.165,
+      "bbox_pixel": [
+        0,
+        224,
+        119,
+        300
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.4746,
+        0.3754,
+        0.6356
+      ],
+      "mask_file": "mask_wall_panel_5.png"
+    },
+    {
+      "component_id": "wall_panel_6",
+      "category": "wall_panel",
+      "confidence": 0.162,
+      "bbox_pixel": [
+        0,
+        172,
+        120,
+        225
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.3644,
+        0.3785,
+        0.4767
+      ],
+      "mask_file": "mask_wall_panel_6.png"
+    },
+    {
+      "component_id": "wall_panel_7",
+      "category": "wall_panel",
+      "confidence": 0.153,
+      "bbox_pixel": [
+        0,
+        142,
+        121,
+        330
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.3008,
+        0.3817,
+        0.6992
+      ],
+      "mask_file": "mask_wall_panel_7.png"
+    },
+    {
+      "component_id": "wall_panel_8",
+      "category": "wall_panel",
+      "confidence": 0.145,
+      "bbox_pixel": [
+        -1,
+        0,
+        277,
+        53
+      ],
+      "bbox_normalized": [
+        -0.0032,
+        0.0,
+        0.8738,
+        0.1123
+      ],
+      "mask_file": "mask_wall_panel_8.png"
+    },
+    {
+      "component_id": "wall_panel_9",
+      "category": "wall_panel",
+      "confidence": 0.138,
+      "bbox_pixel": [
+        -1,
+        333,
+        285,
+        473
+      ],
+      "bbox_normalized": [
+        -0.0032,
+        0.7055,
+        0.8991,
+        1.0021
+      ],
+      "mask_file": "mask_wall_panel_9.png"
+    },
+    {
+      "component_id": "floor_10",
+      "category": "floor",
+      "confidence": 0.129,
+      "bbox_pixel": [
+        0,
+        4,
+        307,
+        472
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.0085,
+        0.9685,
+        1.0
+      ],
+      "mask_file": "mask_floor_10.png"
+    },
+    {
+      "component_id": "cop_11",
+      "category": "cop",
+      "confidence": 0.129,
+      "bbox_pixel": [
+        1,
+        384,
+        143,
+        405
+      ],
+      "bbox_normalized": [
+        0.0032,
+        0.8136,
+        0.4511,
+        0.8581
+      ],
+      "mask_file": "mask_cop_11.png"
+    },
+    {
+      "component_id": "wall_panel_12",
+      "category": "wall_panel",
+      "confidence": 0.127,
+      "bbox_pixel": [
+        0,
+        62,
+        256,
+        96
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.1314,
+        0.8076,
+        0.2034
+      ],
+      "mask_file": "mask_wall_panel_12.png"
+    },
+    {
+      "component_id": "wall_panel_13",
+      "category": "wall_panel",
+      "confidence": 0.123,
+      "bbox_pixel": [
+        0,
+        139,
+        177,
+        335
+      ],
+      "bbox_normalized": [
+        0.0,
+        0.2945,
+        0.5584,
+        0.7097
+      ],
+      "mask_file": "mask_wall_panel_13.png"
+    }
+  ]
+}
