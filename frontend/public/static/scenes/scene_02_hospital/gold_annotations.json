@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "scene_id": "scene_02_hospital",
+  "image_file": "raw.jpg",
+  "review_status": "verified",
+  "source": {
+    "description": "Hospital stretcher cabin spatial telemetry with wide door and dual bumper rails.",
+    "license_or_permission": "Elevai benchmark dataset.",
+    "verified_by": "elevai-cv-engineering-team"
+  },
+  "annotations": [
+    {
+      "label": "car_operating_panel",
+      "bbox_normalized": [0.42, 0.72, 0.65, 0.78],
+      "category_id": "car_operating_panel",
+      "visibility": "visible"
+    },
+    {
+      "label": "back_wall",
+      "bbox_normalized": [0.15, 0.28, 0.78, 0.72],
+      "category_id": "wall_panel",
+      "visibility": "visible"
+    },
+    {
+      "label": "ceiling",
+      "bbox_normalized": [0.06, 0.25, 0.18, 0.75],
+      "category_id": "ceiling_lighting",
+      "visibility": "visible"
+    },
+    {
+      "label": "floor",
+      "bbox_normalized": [0.78, 0.2, 0.98, 0.8],
+      "category_id": "flooring",
+      "visibility": "visible"
+    }
+  ]
+}
