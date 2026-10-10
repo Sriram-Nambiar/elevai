@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "scene_id": "replace_with_scene_id",
+  "image_file": "cabin_view.jpg",
+  "review_status": "provisional",
+  "source": {
+    "description": "Record where this image came from and who created it.",
+    "license_or_permission": "Record the license or written permission before distribution.",
+    "verified_by": "unverified"
+  },
+  "annotations": []
+}
