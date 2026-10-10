@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LiftSceneAnnotations",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "image_file", "review_status", "source", "annotations"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "scene_id": { "type": "string", "minLength": 1 },
+    "image_file": { "type": "string", "minLength": 1 },
+    "review_status": { "enum": ["provisional", "verified"] },
+    "source": {
+      "type": "object",
+      "required": ["description", "license_or_permission", "verified_by"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "license_or_permission": { "type": "string", "minLength": 1 },
+        "verified_by": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "category_id", "bbox_normalized", "visibility"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "category_id": {
+            "enum": ["wall_panel", "flooring", "car_operating_panel", "ceiling_lighting", "doors", "display_unit"]
+          },
+          "bbox_normalized": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "visibility": { "enum": ["visible", "partial", "occluded"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
